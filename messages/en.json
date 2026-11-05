@@ -220,8 +220,8 @@
         "busy": "Tasks or workflow runs are working now: update once they finish.",
         "dirty": "The checkout OLIMP runs from has uncommitted changes: commit or discard them first.",
         "ahead": "The checkout has commits that origin does not: push or drop them first.",
-        "upToDate": "OLIMP is up to date with origin.",
-        "notGit": "OLIMP cannot tell how it was installed: it updates itself only from a git checkout with a branch on origin."
+        "upToDate": "OLIMP is up to date.",
+        "notGit": "OLIMP cannot tell how it was installed: it updates itself from a git checkout with a branch on origin, or from npm."
     },
     "mail": {
         "notConfigured": "OLIMP sends no e-mail: set up the mail server in Settings, Mail.",
@@ -1894,12 +1894,12 @@
             "off": "Off"
         },
         "version": {
-            "hint": "Where OLIMP runs from and whether origin has newer commits.",
+            "hint": "Where OLIMP runs from and whether a newer version is out.",
             "channel": "Channel",
             "commit": "Commit",
             "dirty": "Uncommitted changes",
             "folder": "Folder",
-            "notGit": "OLIMP cannot tell how it was installed: it updates itself only from a git checkout.",
+            "notGit": "OLIMP cannot tell how it was installed: it updates itself from a git checkout or from npm.",
             "notChecked": "Not checked yet.",
             "checkFailed": "The check failed: {error}",
             "behind": "{count, plural, one {# new commit} other {# new commits}} on origin",
@@ -1909,7 +1909,13 @@
             "restarting": "Updating and restarting…",
             "updateHint": "Update pulls origin, runs pnpm install and pnpm build, then starts OLIMP again in the background (log: {log}). Running jobs must finish first.",
             "check": "Check again",
-            "update": "Update & restart"
+            "update": "Update & restart",
+            "installed": "Installed",
+            "global": "Globally with npm",
+            "npx": "Run by npx",
+            "newVersion": "Version {version} on npm",
+            "upToDateNpm": "Up to date with npm.",
+            "updateHintNpm": "Update installs the new version from npm (with npx, starts it), then starts OLIMP again in the background (log: {log}). Running jobs must finish first."
         },
         "account": {
             "profile": "Profile",

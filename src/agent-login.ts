@@ -11,7 +11,7 @@ import { loadConfig, resolveBin } from "./config.ts";
 import { agentEnv } from "./sandbox.ts";
 import { addLogin, agentLogins, createUserHome, USER_ID, userHome } from "./users.ts";
 
-// `pnpm agent-login <claude|codex> [login]` logs an agent CLI in as the account of OLIMP_TOKEN,
+// `olimp agent-login <claude|codex> [login]` (`pnpm agent-login` in a checkout) logs an agent CLI in as the account of OLIMP_TOKEN,
 // into that account's HOME under OLIMP_HOME (or a second login's folder beside it), on the machine
 // OLIMP runs on. Only the API opens the database, so the account comes from GET /api/me.
 
@@ -31,9 +31,9 @@ async function whoAmI(base: string, token: string): Promise<{ id: string; name: 
     return { id: body.id, name: body.name };
 }
 
-async function main(arg: string | undefined, login = DEFAULT_LOGIN): Promise<void> {
+export async function agentLogin(arg: string | undefined, login = DEFAULT_LOGIN): Promise<void> {
     if (!isAgent(arg) || !LOGIN_NAME.test(login))
-        fail(`usage: pnpm agent-login <${AGENTS.join("|")}> [login]`);
+        fail(`usage: olimp agent-login <${AGENTS.join("|")}> [login]`);
     const agent: AgentName = arg;
     const token = process.env.OLIMP_TOKEN?.trim();
     if (!token) fail("set OLIMP_TOKEN to your OLIMP token: the login goes to its account");
@@ -67,4 +67,4 @@ async function main(arg: string | undefined, login = DEFAULT_LOGIN): Promise<voi
     child.on("exit", (code, signal) => process.exit(code ?? (signal ? 1 : 0)));
 }
 
-await main(process.argv[2], process.argv[3]);
+if (import.meta.main) await agentLogin(process.argv[2], process.argv[3]);

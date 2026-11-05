@@ -37,7 +37,7 @@ async function waitForRestart(): Promise<void> {
     throw new Error("OLIMP did not come back: see olimp.log in its home folder");
 }
 
-// The version window: where OLIMP runs from, whether origin has newer commits, update.
+// The version window: where OLIMP runs from, whether origin or npm has a newer version, update.
 export function VersionDialog({
     open,
     onOpenChange,
@@ -68,6 +68,8 @@ export function VersionDialog({
     });
     const v = version.data;
     const git = v?.git;
+    const npm = v?.install === "global" || v?.install === "npx";
+    const updatable = Boolean(git) || npm;
     const behind = v?.update?.behind ?? 0;
     return (
         <Dialog open={open} onOpenChange={(next) => !update.isPending && onOpenChange(next)}>
@@ -101,16 +103,37 @@ export function VersionDialog({
                             <dt className="text-muted-foreground">{t("version.folder")}</dt>
                             <dd className="truncate font-mono text-xs leading-5">{v.root}</dd>
                         </dl>
+                    ) : npm ? (
+                        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
+                            <dt className="text-muted-foreground">{t("version.channel")}</dt>
+                            <dd>
+                                <Badge variant="outline" className="font-mono">
+                                    npm olimp-run
+                                </Badge>
+                            </dd>
+                            <dt className="text-muted-foreground">{t("version.installed")}</dt>
+                            <dd>{t(v.install === "npx" ? "version.npx" : "version.global")}</dd>
+                            <dt className="text-muted-foreground">{t("version.folder")}</dt>
+                            <dd className="truncate font-mono text-xs leading-5">{v.root}</dd>
+                        </dl>
                     ) : (
                         v && <p className="text-muted-foreground">{t("version.notGit")}</p>
                     )}
-                    {git && (
+                    {updatable && v && (
                         <div className="rounded-lg border bg-muted/40 p-3">
                             {!v.update ? (
                                 <p className="text-muted-foreground">{t("version.notChecked")}</p>
                             ) : v.update.error ? (
                                 <p className="text-destructive">
                                     {t("version.checkFailed", { error: v.update.error })}
+                                </p>
+                            ) : npm ? (
+                                <p className="font-medium">
+                                    {behind > 0
+                                        ? t("version.newVersion", {
+                                              version: v.update.version ?? "",
+                                          })
+                                        : t("version.upToDateNpm")}
                                 </p>
                             ) : behind > 0 ? (
                                 <div className="space-y-1">
@@ -147,13 +170,15 @@ export function VersionDialog({
                         </p>
                     )}
                     <FormError error={check.error ?? update.error} />
-                    {git && admin && (
+                    {updatable && admin && (
                         <p className="text-xs text-muted-foreground">
-                            {t("version.updateHint", { log: `${home ?? "OLIMP_HOME"}/olimp.log` })}
+                            {t(npm ? "version.updateHintNpm" : "version.updateHint", {
+                                log: `${home ?? "OLIMP_HOME"}/olimp.log`,
+                            })}
                         </p>
                     )}
                 </DialogBody>
-                {git && admin && (
+                {updatable && admin && (
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -166,7 +191,7 @@ export function VersionDialog({
                             {t("version.check")}
                         </Button>
                         <Button
-                            disabled={behind === 0 || git.dirty || update.isPending}
+                            disabled={behind === 0 || git?.dirty || update.isPending}
                             onClick={() => update.mutate()}
                         >
                             <DownloadIcon />

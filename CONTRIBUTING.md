@@ -70,6 +70,27 @@ in `test/db.test.ts` stop being skipped:
 A change to the schema is a new entry in `MIGRATIONS` (`src/db/migrations.ts`) with SQL for both
 databases; run the tests on both before you open a pull request.
 
+## Release
+
+OLIMP is published to npm as `olimp-run` (npm refuses `olimp`). The repository's `package.json`
+stays `"private": true`; the package is built apart from it:
+
+```sh
+pnpm run package      # .package/olimp-run (src/ compiled to JS, the panel built) and its .tgz
+```
+
+Try the tarball as a user would, with a HOME, data and port of its own so no running OLIMP is
+touched, then publish:
+
+```sh
+cd some-repo && HOME=/tmp/try OLIMP_HOME=/tmp/try/olimp OLIMP_PORT=4880 \
+  npx --yes --package /path/to/olimp/.package/olimp-run-<version>.tgz olimp-run
+npm publish .package/olimp-run
+```
+
+Bump `version` in `package.json` for every release; the panel's version window compares it with
+npm's latest.
+
 ## How work is done
 
 - Work follows [docs/roadmap.md](docs/roadmap.md) stage by stage. Change only what the current

@@ -77,7 +77,7 @@ async function cloneRepo(store: Store, cfg: Config, body: Record<string, unknown
 
 // Any local folder: a git repository whose origin is on GitHub is that repository,
 // any other folder a local project. The folder is the machine's, so only an admin may pick one.
-async function addFolder(
+export async function addFolder(
     store: Store,
     cfg: Config,
     actor: User | null,

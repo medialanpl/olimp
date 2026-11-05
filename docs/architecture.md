@@ -1227,10 +1227,14 @@ project's agents and commands, beside the routes of its issues, integrations and
 
 ## Version and update
 
-`GET /api/version` reports `package.json`'s version and the checkout OLIMP runs from (commit,
-branch, uncommitted changes); without a git checkout OLIMP cannot tell how it was installed and
-offers no update. The check (`POST /api/version/check`, also at start and every six hours) runs
-`git fetch origin <branch>` and counts the commits behind and ahead. `POST /api/version/update`
+`GET /api/version` reports `package.json`'s version, how OLIMP was installed (`install`) and the
+checkout it runs from (commit, branch, uncommitted changes). A checkout is a git repository whose
+top folder is OLIMP's own: a package inside another repository (a project's `node_modules`, the npx
+cache in a home kept in git) is not one, so an update never pulls someone else's repository.
+Outside a checkout, `install` is `global` when OLIMP's folder is in `npm root -g`, `npx` when it is
+in npx's cache (`_npx`), and `package` otherwise, which offers no update. For a checkout the
+check (`POST /api/version/check`, also at start and every six hours) runs `git fetch origin
+<branch>` and counts the commits behind and ahead. `POST /api/version/update`
 (admin only) first pauses the worker, then refuses while jobs run, with uncommitted changes, with
 own commits or when nothing is new; otherwise it runs `git pull --ff-only`, `pnpm install
 --frozen-lockfile` and `pnpm build`, answers `202` and exits; under the systemd service
@@ -1239,6 +1243,25 @@ OLIMP first starts a detached copy of its own command line (logging to `OLIMP_HO
 listens once the old process has exited. A failed
 step resumes the worker and leaves the checkout as far as it got. The panel waits for `/health` and
 reloads.
+
+From npm the check asks the registry for `olimp-run`'s latest version (`version`, `behind` 1 when it
+is newer). The update refuses while jobs run or when nothing is new; a global install runs `npm
+install -g olimp-run@<version>` and restarts as above, npx restarts as `npx --yes
+olimp-run@<version>` with the same arguments. The service installs only from a checkout or a
+lasting npm install, never from npx's cache; from the package its unit starts `src/main.js` without
+`pnpm install` and `pnpm build`.
+
+**The npm package.** `pnpm run package` (`scripts/package.ts`) writes `olimp-run` to
+`.package/olimp-run`, laid out as the repository: `tsc -p tsconfig.build.json` compiles `src/` to
+JavaScript beside `messages/` (Node strips no types under `node_modules`, and `.ts` imports become
+`.js`), Vite builds the panel into its `web/dist`, and its `package.json` has the server's
+dependencies only and the bins `olimp-run` and `olimp`. Code that starts a file of its own (the
+`olimp-memory` and `olimp-dispatch` servers, the service's CLI) takes the extension of the module it
+runs from. `npx olimp-run` started inside a git repository other than OLIMP's checkout adds that
+repository as a project before the sandbox is made, as `POST /api/repos {path}` would (inside
+`OLIMP_BROWSE_ROOT`); a folder that is a project already is left alone. Before it opens the database
+OLIMP checks that its port is free, since a second OLIMP on the same home would mark the first one's
+running jobs interrupted.
 
 ## Threat model
 

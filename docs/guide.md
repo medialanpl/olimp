@@ -6,15 +6,28 @@ MCP server. How it is built: [architecture.md](architecture.md); what comes next
 
 ## Requirements
 
-- Node 24 and pnpm (`mise install` reads `mise.toml`)
-- `git`, and the GitHub CLI `gh` logged in (`gh auth login`)
-- Claude Code `claude` logged in with your own account (with [accounts](#accounts-and-tokens),
-  each account logs in its own)
-- Optional: Codex CLI `codex` logged in with your own account, for tasks with `"agent":"codex"`;
-  without it OLIMP starts and only such tasks fail
+- Node 24.2 or later; pnpm only to run it from a clone (`mise install` reads `mise.toml`)
+- `git`, and for GitHub projects the GitHub CLI `gh` logged in (`gh auth login`)
+- At least one agent CLI logged in with your own account: Claude Code `claude` is the default
+  agent (with [accounts](#accounts-and-tokens), each account logs in its own); Codex, Copilot,
+  Cursor, Junie, OpenCode and pi are optional, and without one OLIMP starts and only its steps fail
 - Optional: MySQL 8.4 instead of SQLite, e.g. Docker for `compose.yaml`
 
 ## Run
+
+From npm, the package `olimp-run`:
+
+```sh
+cd your-repo && npx olimp-run   # panel and API on http://127.0.0.1:4850, data in ~/.olimp
+npm install -g olimp-run        # installed: `olimp` starts it, `olimp service install` keeps it
+```
+
+Started inside a git repository, it adds that repository as a project, as Add a local folder would
+(inside `OLIMP_BROWSE_ROOT`, your home folder by default); a fresh installation started elsewhere
+gets the `sandbox` project instead. It reads no `.env`: set variables in the environment. The
+panel's version window and `olimp deploy` update it from npm.
+
+From a clone:
 
 ```sh
 pnpm install            # once, and after every pull
@@ -33,9 +46,15 @@ variable.
 ### As a service
 
 On Linux and WSL (with `systemd=true` in `/etc/wsl.conf`) OLIMP runs as a systemd user service, so it
-starts with the system, comes back after a crash and restarts with one command. The service runs
-whatever its checkout holds, so it gets a clone of its own on `main`, as `next start` runs a build
-and not the code you are editing; `install` refuses another branch or uncommitted changes:
+starts with the system, comes back after a crash and restarts with one command. From npm, install
+the package globally (npx's cache is no place for a service):
+
+```sh
+npm install -g olimp-run && olimp service install
+```
+
+From a clone, the service runs whatever its checkout holds, so it gets a clone of its own on
+`main`, not the folder you edit code in; `install` refuses another branch or uncommitted changes:
 
 ```sh
 git clone https://github.com/medialanpl/olimp ~/.olimp/app && cd ~/.olimp/app && pnpm install
@@ -47,16 +66,16 @@ olimp service logs           # follow the log (journalctl)
 olimp service uninstall
 ```
 
-The unit runs `src/main.ts` from this checkout with `.env` and the `PATH`, `OLIMP_HOME` and
-`OLIMP_PORT` of the shell that installed it, so the agents' CLIs are found; install again after
-moving the checkout or changing Node; installing from another clone moves the `olimp` link there.
+The unit runs `src/main.ts` from this checkout (`src/main.js` from the package, without `pnpm
+install` and `pnpm build`) with `.env` and the `PATH`, `OLIMP_HOME` and `OLIMP_PORT` of the shell
+that installed it, so the agents' CLIs are found; install again after moving the checkout or
+changing Node; installing from another clone moves the `olimp` link there.
 `olimp deploy`, like the update in the panel, asks the running OLIMP to update itself (with accounts
 it needs an admin's `OLIMP_TOKEN`); it exits and lets the service start the new version.
 
 ### Working on OLIMP
 
-Work in a clone of your own on any branch, as with `next dev`; the service's clone only ever moves
-with `olimp deploy`:
+Work in a clone of your own on any branch; the service's clone only ever moves with `olimp deploy`:
 
 ```sh
 pnpm dev               # API on 4851 restarting on every change, data in ~/.olimp-dev; panel on http://localhost:5175
@@ -365,7 +384,7 @@ OLIMP_TOKEN=olimp_… pnpm agent-login claude   # interactive claude with your H
 OLIMP_TOKEN=olimp_… pnpm agent-login codex    # codex login with your HOME
 ```
 
-`pnpm agent-login` asks the API (`GET /api/me`) whose token it is and starts the CLI; it never opens
+`pnpm agent-login` (`olimp agent-login` from npm) asks the API (`GET /api/me`) whose token it is and starts the CLI; it never opens
 the database. Without a login of the step's agent (`.claude/.credentials.json` or
 `.codex/auth.json` in that `HOME`) the step fails with a message naming the account and this
 command; it never falls back to the installation's login. Logins are kept as files, as Claude Code
@@ -867,7 +886,7 @@ Errors are `{"error": "<message>", "code": "<key>"}`. Rely on `code` (e.g. `repo
 
 ## MCP
 
-`pnpm mcp` starts an MCP server on stdio with the tools `olimp_add_repo`, `olimp_create_repo`,
+`olimp mcp` (`pnpm mcp` in a clone) starts an MCP server on stdio with the tools `olimp_add_repo`, `olimp_create_repo`,
 `olimp_list_folders`, `olimp_create_folder`, `olimp_list_github_owners`, `olimp_list_repos`, `olimp_get_repo`, `olimp_remove_repo`, `olimp_whoami`, `olimp_list_users`, `olimp_create_user`,
 `olimp_delete_user`, `olimp_list_tokens`, `olimp_create_token`, `olimp_revoke_token`,
 `olimp_create_task`, `olimp_list_tasks`, `olimp_get_task`, `olimp_get_task_trace`,
@@ -894,7 +913,8 @@ with accounts it acts as that account. With `OLIMP_STEP_TOKEN` it is an agent st
 server: only the memory and note tools, signed with that step's token. For Claude Code:
 
 ```sh
-claude mcp add olimp -e OLIMP_TOKEN=olimp_… -- pnpm --dir /path/to/olimp mcp
+claude mcp add olimp -e OLIMP_TOKEN=olimp_… -- npx -y olimp-run mcp        # from npm
+claude mcp add olimp -e OLIMP_TOKEN=olimp_… -- pnpm --dir /path/to/olimp mcp  # from a clone
 ```
 
 ## Configuration

@@ -473,7 +473,7 @@ test("pnpm agent-login starts the agent CLI with the HOME of the token's account
     const wrong = await agentLogin(cfg, port, "olimp_wrong");
     assert.match(wrong.stderr, /unknown or revoked/);
     const usage = await agentLogin(cfg, port, member.token, "gpt");
-    assert.match(usage.stderr, /usage: pnpm agent-login <claude\|codex\|copilot/);
+    assert.match(usage.stderr, /usage: olimp agent-login <claude\|codex\|copilot/);
     assert.equal(await store.hasUsers(), true);
     const work = await agentLogin(cfg, port, member.token, "codex", "work");
     const folder = join(cfg.home, "users", member.id, "logins", "codex", "work");

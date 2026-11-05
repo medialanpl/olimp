@@ -35,8 +35,9 @@ export function registerSystemTools(
         "olimp_get_version",
         {
             description:
-                "Show OLIMP's version, the git checkout it runs from (commit, branch, uncommitted " +
-                "changes) and the last check for updates on origin.",
+                "Show OLIMP's version, how it was installed (install: git, global for a global npm " +
+                "package, npx, or package inside another project), the git checkout it runs from " +
+                "(commit, branch, uncommitted changes) and the last check for updates.",
         },
         () => call("GET", "/api/version"),
     );
@@ -44,7 +45,8 @@ export function registerSystemTools(
         "olimp_check_update",
         {
             description:
-                "Fetch origin and count the commits the checkout is behind and ahead (admin only).",
+                "Look for a newer version (admin only): a checkout fetches origin and counts the " +
+                "commits it is behind and ahead; an npm install asks npm for its latest version.",
         },
         () => call("POST", "/api/version/check", {}),
     );
@@ -52,10 +54,11 @@ export function registerSystemTools(
         "olimp_update",
         {
             description:
-                "Update OLIMP from origin and restart it (admin only): pull, pnpm install and " +
-                "build, then a new process. Refused while jobs run, with uncommitted changes or " +
-                "own commits in the checkout, or when it is up to date. The API is down for a few " +
-                "seconds; ongoing MCP calls fail meanwhile.",
+                "Update OLIMP and restart it (admin only): a checkout pulls origin, runs pnpm " +
+                "install and build; a global npm package installs npm's latest version; npx starts " +
+                "it. Refused while jobs run, with uncommitted changes or own commits in the " +
+                "checkout, or when it is up to date. The API is down for a few seconds; ongoing " +
+                "MCP calls fail meanwhile.",
         },
         () => call("POST", "/api/version/update", {}),
     );

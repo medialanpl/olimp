@@ -220,8 +220,8 @@
         "busy": "Teraz pracują zadania albo runy workflowów: zaktualizuj, gdy się skończą.",
         "dirty": "Kopia, z której działa OLIMP, ma niezatwierdzone zmiany: najpierw je zatwierdź albo odrzuć.",
         "ahead": "Kopia ma commity, których nie ma origin: najpierw je wypchnij albo usuń.",
-        "upToDate": "OLIMP jest aktualny względem origin.",
-        "notGit": "OLIMP nie wie, jak został zainstalowany: aktualizuje się sam tylko z kopii git z gałęzią na origin."
+        "upToDate": "OLIMP jest aktualny.",
+        "notGit": "OLIMP nie wie, jak został zainstalowany: aktualizuje się sam z kopii git z gałęzią na origin albo z npm."
     },
     "mail": {
         "notConfigured": "OLIMP nie wysyła poczty: ustaw serwer poczty w Ustawieniach, w sekcji Poczta.",
@@ -1894,12 +1894,12 @@
             "off": "Wyłączona"
         },
         "version": {
-            "hint": "Skąd działa OLIMP i czy origin ma nowsze commity.",
+            "hint": "Skąd działa OLIMP i czy jest nowsza wersja.",
             "channel": "Kanał",
             "commit": "Commit",
             "dirty": "Niezatwierdzone zmiany",
             "folder": "Folder",
-            "notGit": "OLIMP nie wie, jak został zainstalowany: aktualizuje się sam tylko z kopii git.",
+            "notGit": "OLIMP nie wie, jak został zainstalowany: aktualizuje się sam z kopii git albo z npm.",
             "notChecked": "Jeszcze nie sprawdzono.",
             "checkFailed": "Sprawdzenie nie powiodło się: {error}",
             "behind": "{count, plural, one {# nowy commit} few {# nowe commity} many {# nowych commitów} other {# nowego commitu}} na origin",
@@ -1909,7 +1909,13 @@
             "restarting": "Aktualizacja i ponowne uruchomienie…",
             "updateHint": "Aktualizacja pobiera origin, uruchamia pnpm install i pnpm build, potem startuje OLIMP ponownie w tle (log: {log}). Pracujące zadania muszą się najpierw skończyć.",
             "check": "Sprawdź ponownie",
-            "update": "Aktualizuj i uruchom ponownie"
+            "update": "Aktualizuj i uruchom ponownie",
+            "installed": "Instalacja",
+            "global": "Globalnie przez npm",
+            "npx": "Uruchomiony przez npx",
+            "newVersion": "Wersja {version} w npm",
+            "upToDateNpm": "Aktualny względem npm.",
+            "updateHintNpm": "Aktualizacja instaluje nową wersję z npm (przy npx uruchamia ją), potem uruchamia OLIMP ponownie w tle (log: {log}). Trwające zadania muszą się najpierw skończyć."
         },
         "account": {
             "profile": "Profil",

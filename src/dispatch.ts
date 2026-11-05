@@ -1,11 +1,15 @@
 import { createHash, randomBytes } from "node:crypto";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import type { Servers } from "./agents.ts";
 import type { Config } from "./config.ts";
 import { run } from "./proc.ts";
 import type { Dispatch, Store, Task } from "./store.ts";
 
-const ROOT = join(import.meta.dirname, "..");
+// The server next to this module: .ts in a checkout, .js in the npm package.
+const DISPATCH_SERVER_FILE = join(
+    import.meta.dirname,
+    `dispatch-mcp${extname(import.meta.filename)}`,
+);
 export const DISPATCH_SERVER = "olimp-dispatch";
 export const SUBTASKS_MAX = 50;
 export const IN_FLIGHT_MAX = 4;
@@ -33,7 +37,7 @@ export function dispatchServers(cfg: Config, token: string): Servers {
         [DISPATCH_SERVER]: {
             kind: "stdio",
             command: process.execPath,
-            args: [join(ROOT, "src", "dispatch-mcp.ts")],
+            args: [DISPATCH_SERVER_FILE],
             env: { DISPATCH_URL: `http://127.0.0.1:${cfg.port}`, DISPATCH_TOKEN: token },
         },
     };

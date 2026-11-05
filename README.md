@@ -1,9 +1,8 @@
-<h1 align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/olimp-horizontal-reversed.svg">
-    <img src="docs/brand/olimp-horizontal.svg" alt="OLIMP" width="320">
-  </picture>
-</h1>
+<p align="center">
+  <img src="docs/brand/olimp-app-icon.svg" alt="" width="104">
+</p>
+
+<h1 align="center">OLIMP</h1>
 
 <p align="center">
   <strong>Self-hosted coding agents for your Git repositories.<br>
@@ -93,31 +92,35 @@ in a web panel, a REST API and an MCP server.
 
 ## Quick start
 
-You need Node 24.2 or later, pnpm, git and [Claude Code](https://github.com/anthropics/claude-code)
-logged in with your account. GitHub projects also need the [GitHub CLI](https://cli.github.com)
-logged in (`gh auth login`); Codex and the other agents are optional.
+You need **Node 24.2+**, **git** and at least one agent CLI you're logged into:
+[Claude Code](https://github.com/anthropics/claude-code) (the default),
+[Codex](https://github.com/openai/codex), [GitHub Copilot CLI](https://github.com/github/copilot-cli),
+[Cursor Agent](https://cursor.com/cli), [Junie](https://www.jetbrains.com/junie/),
+[OpenCode](https://opencode.ai) or [pi](https://github.com/badlogic/pi-mono). The
+[GitHub CLI](https://cli.github.com) `gh` is needed only for GitHub projects.
 
 ```sh
-git clone https://github.com/medialanpl/olimp && cd olimp
-pnpm install
-pnpm prod     # builds the panel, then serves the panel and the API on http://127.0.0.1:4850
+cd your-repo
+npx olimp-run
 ```
 
-Open `http://127.0.0.1:4850`. A fresh installation has a `sandbox` project to try an agent on. Add
-your own projects from GitHub (cloned with your `gh` login), from any local folder, or as new
-repositories. An npm package (`npx olimp-run`) is the next stage of the roadmap.
+This starts OLIMP at `http://127.0.0.1:4850` with your repository as a project: describe a task and
+send it. Add more projects from GitHub, from any local folder or as new repositories, and pick
+another default agent in **Settings → Agent accounts**. Data stays in `~/.olimp`.
 
 ### Keep it running
 
-On Linux and WSL, OLIMP can run as a systemd user service from a clone of its own. It then starts
-with the system and comes back after a crash:
+Install it to get the `olimp` command. On Linux and WSL it then runs as a systemd user service that
+starts with the system and comes back after a crash; the panel's version window updates it from npm:
 
 ```sh
-git clone https://github.com/medialanpl/olimp ~/.olimp/app && cd ~/.olimp/app && pnpm install
-pnpm olimp service install   # also links the olimp command into ~/.local/bin
-olimp deploy                 # after a merge: pull, install, build and restart once no job is working
+npm install -g olimp-run
+olimp service install
 olimp service logs
 ```
+
+To run the latest `main` instead, from a clone: `pnpm install && pnpm prod`
+(see the [guide](docs/guide.md#run)).
 
 ### Reach it from elsewhere
 
@@ -166,7 +169,7 @@ draw in the panel or send as JSON, here one that repairs the change until the te
 To let your own agent use OLIMP, add its MCP server (with accounts, also `-e OLIMP_TOKEN=olimp_…`):
 
 ```sh
-claude mcp add olimp -- pnpm --dir /path/to/olimp mcp
+claude mcp add olimp -- npx -y olimp-run mcp
 ```
 
 ## Security
@@ -195,8 +198,8 @@ against and what it does not.
 Found a bug or missing something? [Open an issue](https://github.com/medialanpl/olimp/issues).
 Pull requests are welcome: a branch from `main`, a title in
 [Conventional Commits](https://www.conventionalcommits.org) form (CI checks it) and a green
-`pnpm check` (types, lint, tests and the panel build). [AGENTS.md](AGENTS.md) has the house rules,
-for people and AI agents alike.
+`pnpm check` (types, lint, tests and the panel build). [CONTRIBUTING.md](CONTRIBUTING.md) covers
+the setup and the checks, [AGENTS.md](AGENTS.md) the house rules, for people and AI agents alike.
 
 ```sh
 git clone https://github.com/medialanpl/olimp && cd olimp

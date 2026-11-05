@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { openSync, readFileSync } from "node:fs";
+import { openSync, readFileSync, realpathSync } from "node:fs";
 import os from "node:os";
-import { join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { AGENT_SPECS, AGENTS, type AgentName } from "./agents.ts";
 import { type Config, resolveBin } from "./config.ts";
 import { runningJobs } from "./jobs.ts";
@@ -9,8 +9,11 @@ import { must, run } from "./proc.ts";
 import { pauseWorker } from "./runner.ts";
 import { agentLogins } from "./users.ts";
 
-// The checkout OLIMP runs from.
+// The checkout or the npm package OLIMP runs from.
 export const ROOT = join(import.meta.dirname, "..");
+export const PACKAGE = "olimp-run";
+// shortcut: npm's public registry only, make it configurable when someone installs from a mirror.
+const REGISTRY = "https://registry.npmjs.org";
 
 const cpuTimes = () =>
     os.cpus().reduce(
@@ -96,16 +99,64 @@ const git = (args: string[], timeoutMs = 10_000) =>
 
 export interface UpdateCheck {
     checkedAt: string;
-    // Commits on origin that this checkout lacks, and its own commits origin lacks.
+    // Commits on origin that this checkout lacks, and its own commits origin lacks; from npm,
+    // behind is 1 when npm has a newer version.
     behind: number;
     ahead: number;
     latest: { commit: string; subject: string; date: string } | null;
+    // The newest version on npm, for an installation from npm.
+    version: string | null;
     error: string | null;
 }
+
+// How OLIMP was installed decides how it updates: a checkout pulls origin, a global npm package
+// installs the new version, npx starts it; a package inside another project does not update.
+export type Install = "git" | "global" | "npx" | "package";
+
+export function installKind(
+    root: string,
+    checkout: boolean,
+    globalModules: string | null,
+): Install {
+    if (checkout) return "git";
+    if (root.split(sep).includes("_npx")) return "npx";
+    return globalModules !== null && dirname(root) === globalModules ? "global" : "package";
+}
+
+// Whether npm's version is newer than the running one; a pre-release counts as its release.
+export function newerVersion(latest: string, current: string): boolean {
+    const parts = (v: string) => (v.split("-")[0] ?? "").split(".").map((n) => Number(n) || 0);
+    const [a, b] = [parts(latest), parts(current)];
+    for (let i = 0; i < 3; i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
+    return false;
+}
+
+let installed: Promise<Install> | null = null;
+
+export const install = (): Promise<Install> => {
+    installed ??= (async () => {
+        if (await checkout()) return "git";
+        const npm = await run("npm", ["root", "-g"], { timeoutMs: 10_000 }).catch(() => null);
+        const modules = npm?.code === 0 ? npm.stdout.trim() : "";
+        let real: string | null = null;
+        try {
+            real = modules ? realpathSync(modules) : null;
+        } catch {}
+        return installKind(ROOT, false, real);
+    })();
+    return installed;
+};
+
+const currentVersion = () =>
+    (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }).version;
 
 let lastCheck: UpdateCheck | null = null;
 
 async function checkout() {
+    // A package inside a repository (another project's node_modules, the npx cache in a home kept
+    // in git) is not OLIMP's checkout: updating it would pull that repository.
+    const top = await git(["rev-parse", "--show-toplevel"]);
+    if (top.code !== 0 || realpathSync(top.stdout.trim()) !== realpathSync(ROOT)) return null;
     const head = await git(["rev-parse", "--short", "HEAD"]);
     if (head.code !== 0) return null;
     const [branch, date, status] = await Promise.all([
@@ -121,19 +172,38 @@ async function checkout() {
     };
 }
 
-// Without a git checkout OLIMP cannot tell how it was installed, so it offers no update.
 export async function version() {
-    const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string };
-    return { version: pkg.version, git: await checkout(), update: lastCheck, root: ROOT };
+    return {
+        version: currentVersion(),
+        install: await install(),
+        git: await checkout(),
+        update: lastCheck,
+        root: ROOT,
+    };
+}
+
+async function checkNpm(at: string, failed: (error: string) => UpdateCheck): Promise<UpdateCheck> {
+    const res = await fetch(`${REGISTRY}/${PACKAGE}/latest`, {
+        signal: AbortSignal.timeout(15_000),
+    }).catch(() => null);
+    if (!res?.ok)
+        return failed(res ? `npm registry: HTTP ${res.status}` : "npm registry unreachable");
+    const latest = String(((await res.json()) as { version?: unknown }).version ?? "");
+    if (!latest) return failed("npm registry: no version");
+    const behind = newerVersion(latest, currentVersion()) ? 1 : 0;
+    lastCheck = { checkedAt: at, behind, ahead: 0, latest: null, version: latest, error: null };
+    return lastCheck;
 }
 
 export async function checkUpdate(): Promise<UpdateCheck> {
     const at = new Date().toISOString();
-    const current = await checkout();
     const failed = (error: string) => {
-        lastCheck = { checkedAt: at, behind: 0, ahead: 0, latest: null, error };
+        lastCheck = { checkedAt: at, behind: 0, ahead: 0, latest: null, version: null, error };
         return lastCheck;
     };
+    const kind = await install();
+    if (kind === "global" || kind === "npx") return checkNpm(at, failed);
+    const current = await checkout();
     if (!current) return failed("not a git checkout");
     if (current.branch === "HEAD") return failed("detached HEAD");
     const fetched = await git(["fetch", "--quiet", "origin", current.branch], 60_000);
@@ -149,6 +219,7 @@ export async function checkUpdate(): Promise<UpdateCheck> {
         behind,
         ahead,
         latest: commit ? { commit, subject, date } : null,
+        version: null,
         error: null,
     };
     return lastCheck;
@@ -169,6 +240,13 @@ export type UpdateRefusal = "busy" | "dirty" | "ahead" | "upToDate" | "notGit";
 
 // Why OLIMP cannot update itself now, or null.
 export async function updateRefusal(): Promise<UpdateRefusal | null> {
+    const kind = await install();
+    if (kind === "global" || kind === "npx") {
+        if (runningJobs() > 0) return "busy";
+        const check = await checkUpdate();
+        if (check.error) throw new Error(check.error);
+        return check.behind > 0 ? null : "upToDate";
+    }
     const current = await checkout();
     if (!current || current.branch === "HEAD") return "notGit";
     if (current.dirty) return "dirty";
@@ -179,46 +257,60 @@ export async function updateRefusal(): Promise<UpdateRefusal | null> {
     return check.behind > 0 ? null : "upToDate";
 }
 
-// Pulls origin's commits, installs and builds, then starts a copy of this process and exits.
+// A checkout pulls origin's commits, installs and builds; a global package installs npm's newest
+// version; then a copy of this process starts and this one exits (npx starts the new version).
 // No job starts meanwhile; after a failed step the worker resumes and the checkout may be half
 // updated. Undefined once the restart is under way.
 export async function update(cfg: Config): Promise<UpdateRefusal | undefined> {
     pauseWorker(true);
+    let command: string[] | undefined;
     try {
         const refusal = await updateRefusal();
         if (refusal) {
             pauseWorker(false);
             return refusal;
         }
-        const current = await checkout();
-        const pnpm = await resolveBin("pnpm");
-        await must("git", ["-C", ROOT, "pull", "--ff-only", "origin", current?.branch ?? "main"]);
-        await must(pnpm, ["install", "--frozen-lockfile"], { cwd: ROOT });
-        await must(pnpm, ["build"], { cwd: ROOT });
+        const kind = await install();
+        const next = `${PACKAGE}@${lastCheck?.version}`;
+        if (kind === "global") await must(await resolveBin("npm"), ["install", "-g", next]);
+        else if (kind === "npx")
+            command = [await resolveBin("npx"), "--yes", next, ...process.argv.slice(2)];
+        else {
+            const current = await checkout();
+            const pnpm = await resolveBin("pnpm");
+            await must("git", [
+                "-C",
+                ROOT,
+                "pull",
+                "--ff-only",
+                "origin",
+                current?.branch ?? "main",
+            ]);
+            await must(pnpm, ["install", "--frozen-lockfile"], { cwd: ROOT });
+            await must(pnpm, ["build"], { cwd: ROOT });
+        }
     } catch (error) {
         pauseWorker(false);
         throw error;
     }
-    setTimeout(() => restart(cfg), 300);
+    setTimeout(() => restart(cfg, command), 300);
     return undefined;
 }
 
 // The service's systemd starts the new version itself; otherwise a detached copy takes over, logging
 // to OLIMP_HOME/olimp.log.
-function restart(cfg: Config): void {
+function restart(
+    cfg: Config,
+    command = [process.execPath, ...process.execArgv, ...process.argv.slice(1)],
+): void {
     if (process.env.OLIMP_SERVICE) process.exit(0);
     const log = openSync(join(cfg.home, "olimp.log"), "a");
     // The old process frees the port before the copy listens.
-    spawn(
-        "sh",
-        [
-            "-c",
-            'sleep 2; exec "$0" "$@"',
-            process.execPath,
-            ...process.execArgv,
-            ...process.argv.slice(1),
-        ],
-        { cwd: process.cwd(), env: process.env, detached: true, stdio: ["ignore", log, log] },
-    ).unref();
+    spawn("sh", ["-c", 'sleep 2; exec "$0" "$@"', ...command], {
+        cwd: process.cwd(),
+        env: process.env,
+        detached: true,
+        stdio: ["ignore", log, log],
+    }).unref();
     process.exit(0);
 }

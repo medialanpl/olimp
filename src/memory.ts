@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import type { Servers } from "./agents.ts";
 import type { Config } from "./config.ts";
 import { MEMORY_SEARCH_HITS, MEMORY_SLUG_MAX } from "./limits.ts";
@@ -165,7 +165,8 @@ export function memoryGraph(repo: string, pages: MemoryPage[], notes: Note[], un
     return { repo, nodes, edges, unwoven };
 }
 
-const ROOT = join(import.meta.dirname, "..");
+// The server next to this module: .ts in a checkout, .js in the npm package.
+const MCP_SERVER_FILE = join(import.meta.dirname, `mcp${extname(import.meta.filename)}`);
 export const MEMORY_SERVER = "olimp-memory";
 
 // What a step's token reaches: the memory and notes of its project and of its knowledge areas,
@@ -193,7 +194,7 @@ export const memoryServers = (cfg: Config, token: string): Servers => ({
     [MEMORY_SERVER]: {
         kind: "stdio",
         command: process.execPath,
-        args: [join(ROOT, "src", "mcp.ts")],
+        args: [MCP_SERVER_FILE],
         env: { OLIMP_URL: `http://127.0.0.1:${cfg.port}`, OLIMP_STEP_TOKEN: token },
     },
 });

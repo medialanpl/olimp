@@ -5,8 +5,22 @@
     "bin": {
         "olimp": "src/cli.ts"
     },
-    "description": "Open, self-hosted ecosystem for AI agents working on your Git repositories.",
+    "description": "Self-hosted platform for AI coding agents working on your Git repositories.",
     "license": "MIT",
+    "keywords": [
+        "ai-agents",
+        "coding-agents",
+        "claude-code",
+        "codex",
+        "opencode",
+        "github-copilot",
+        "agent-orchestration",
+        "self-hosted",
+        "git-worktrees",
+        "pull-requests",
+        "workflow-automation",
+        "mcp"
+    ],
     "type": "module",
     "packageManager": "pnpm@12.4.2",
     "engines": {
@@ -27,7 +41,8 @@
         "check": "pnpm typecheck && pnpm lint && pnpm run test && pnpm build",
         "test": "node --test",
         "test:mysql": "node --env-file-if-exists=.env --test --test-concurrency=1",
-        "upgrade:package": "pnpm update --interactive --latest"
+        "upgrade:package": "pnpm update --interactive --latest",
+        "package": "node scripts/package.ts"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.32.2",

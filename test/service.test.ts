@@ -35,3 +35,19 @@ test("the service is installed only from a clean main, or from a copy without gi
     assert.match(checkoutRefusal("feat/x", "") ?? "", /on feat\/x, not main/);
     assert.match(checkoutRefusal("main", " M src/api.ts") ?? "", /uncommitted/);
 });
+
+test("the service unit of the npm package starts its build without pnpm", () => {
+    const unit = unitFile(
+        "/opt/node/bin/node",
+        null,
+        { PATH: "/usr/bin" },
+        "/usr/lib/node_modules/olimp-run",
+        ".js",
+    );
+    const lines = unit.split("\n");
+    assert.ok(lines.includes("WorkingDirectory=/usr/lib/node_modules/olimp-run"));
+    assert.ok(
+        lines.includes('ExecStart="/opt/node/bin/node" --env-file-if-exists=.env src/main.js'),
+    );
+    assert.ok(!lines.some((line) => line.startsWith("ExecStartPre")));
+});

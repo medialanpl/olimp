@@ -10,21 +10,23 @@ import {
     writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, extname, join } from "node:path";
 import { parseEnv } from "node:util";
 import { resolveBin } from "./config.ts";
-import { ROOT } from "./machine.ts";
+import { install as installKind, ROOT } from "./machine.ts";
 
 const NAME = "olimp";
 const UNIT = join(homedir(), ".config", "systemd", "user", `${NAME}.service`);
 const LINK = join(homedir(), ".local", "bin", NAME);
-const CLI = join(ROOT, "src", "cli.ts");
+// .ts in a checkout, which installs and builds before every start; .js in the npm package.
+const EXT = extname(import.meta.filename);
+const CLI = join(import.meta.dirname, `cli${EXT}`);
 // From the installing shell: where the agents' CLIs are, and which instance. Secrets stay in .env.
 const PASSED = ["PATH", "OLIMP_HOME", "OLIMP_PORT"];
 
 export const SERVICE_USAGE = `olimp service <command>
-  install     run OLIMP from this checkout (a clean main) as a systemd user service, started with
-              the system, and link \`olimp\`
+  install     run OLIMP from this checkout (a clean main) or this npm install as a systemd user
+              service, started with the system, and link \`olimp\` from a checkout
   restart     install dependencies, build the panel and restart (running tasks are interrupted)
   start, stop, status
   logs        follow the log
@@ -33,7 +35,14 @@ export const SERVICE_USAGE = `olimp service <command>
 // systemd expands % and reads backslashes and quotes inside a quoted word.
 const word = (value: string) => `"${value.replace(/[\\"]/g, "\\$&").replaceAll("%", "%%")}"`;
 
-export function unitFile(node: string, pnpm: string, env: NodeJS.ProcessEnv, root = ROOT): string {
+// Without pnpm (the npm package) the unit starts the build it holds.
+export function unitFile(
+    node: string,
+    pnpm: string | null,
+    env: NodeJS.ProcessEnv,
+    root = ROOT,
+    ext = EXT,
+): string {
     const passed = PASSED.filter((name) => env[name]).map(
         (name) => `Environment=${word(`${name}=${env[name]}`)}`,
     );
@@ -47,9 +56,13 @@ export function unitFile(node: string, pnpm: string, env: NodeJS.ProcessEnv, roo
         "Environment=OLIMP_SERVICE=1",
         ...passed,
         // After a merge: its dependencies and panel. A failed step still starts the last good build.
-        `ExecStartPre=-${word(pnpm)} install --frozen-lockfile --config.confirmModulesPurge=false`,
-        `ExecStartPre=-${word(pnpm)} build`,
-        `ExecStart=${word(node)} --env-file-if-exists=.env src/main.ts`,
+        ...(pnpm
+            ? [
+                  `ExecStartPre=-${word(pnpm)} install --frozen-lockfile --config.confirmModulesPurge=false`,
+                  `ExecStartPre=-${word(pnpm)} build`,
+              ]
+            : []),
+        `ExecStart=${word(node)} --env-file-if-exists=.env src/main${ext}`,
         "Restart=always",
         "RestartSec=3",
         // OLIMP's exit codes on SIGINT and SIGTERM: a stop, not a failure.
@@ -79,10 +92,21 @@ const call = (command: string, args: string[], quiet = false) =>
 const systemctl = (...args: string[]) => call("systemctl", ["--user", ...args]);
 
 async function install(): Promise<number> {
-    const refused = checkoutRefusal(
-        gitOut("rev-parse", "--abbrev-ref", "HEAD"),
-        gitOut("status", "--porcelain", "--untracked-files=no"),
-    );
+    const kind = await installKind();
+    if (kind === "npx") {
+        console.error(
+            "npx runs OLIMP from a cache npm may clear: install it to keep it as a service:\n" +
+                "  npm install -g olimp-run && olimp service install",
+        );
+        return 1;
+    }
+    const refused =
+        kind === "git"
+            ? checkoutRefusal(
+                  gitOut("rev-parse", "--abbrev-ref", "HEAD"),
+                  gitOut("status", "--porcelain", "--untracked-files=no"),
+              )
+            : null;
     if (refused) {
         const origin = gitOut("remote", "get-url", "origin") ?? "<OLIMP's repository>";
         console.error(
@@ -99,13 +123,15 @@ async function install(): Promise<number> {
         return 1;
     }
     mkdirSync(dirname(UNIT), { recursive: true });
-    writeFileSync(UNIT, unitFile(process.execPath, await resolveBin("pnpm"), process.env));
+    const pnpm = EXT === ".ts" ? await resolveBin("pnpm") : null;
+    writeFileSync(UNIT, unitFile(process.execPath, pnpm, process.env));
     const failed = systemctl("daemon-reload") || systemctl("enable", NAME);
     if (failed) return failed;
     // Without lingering the service waits for a login; WSL logs in when a terminal opens.
     if (call("loginctl", ["enable-linger"], true) !== 0)
         console.warn("could not enable lingering: OLIMP starts with your first login");
-    link();
+    // npm put the olimp command on PATH already.
+    if (EXT === ".ts") link();
     console.log(`OLIMP is the systemd user service "${NAME}" (${UNIT})`);
     // Started against an OLIMP outside the service, it would rebuild and fail every few seconds.
     if (call("systemctl", ["--user", "is-active", NAME], true) !== 0 && (await portTaken())) {
