@@ -65,7 +65,7 @@ export interface RepoSettings {
 export const noSettings = (): RepoSettings => ({
     instructions: "",
     workspace: null,
-    keepWorktrees: 0,
+    keepWorktrees: 10,
     worktreeScripts: { afterCreate: [], beforeRemove: [] },
     defaultSkill: null,
     teamSkills: true,

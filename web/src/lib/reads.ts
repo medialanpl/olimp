@@ -2,6 +2,8 @@ import type { Reads, RunStatus, Task } from "./types.ts";
 
 export const FINISHED: RunStatus[] = ["done", "failed", "cancelled"];
 
+export const prNumber = (url: string | null) => url?.match(/\/pull\/(\d+)/)?.[1] ?? null;
+
 // A finished task or run the caller has not opened; until the reads load, none is.
 export function unreadOf(reads: Reads | undefined) {
     const read = new Set([...(reads?.tasks ?? []), ...(reads?.runs ?? [])]);
@@ -23,10 +25,11 @@ type ThreadStep = Pick<
     | "archivedAt"
     | "createdAt"
     | "costUsd"
+    | "prUrl"
 >;
 
 // One entry per thread, as one task: the first task's identity (its id is what pins and archives),
-// the newest step's state, the whole cost, and `last`, the newest step's id, whose read counts.
+// the newest step's state, the whole cost, the newest PR, and `last`, the newest step's id, whose read counts.
 // A thread whose first task fell off the list starts at its oldest step there.
 export function threadsOf<T extends ThreadStep>(tasks: T[]): (T & { last: string })[] {
     const groups = new Map<string, T[]>();
@@ -55,6 +58,8 @@ export function threadsOf<T extends ThreadStep>(tasks: T[]): (T & { last: string
                 (sum, task) => (task.costUsd === null ? sum : (sum ?? 0) + task.costUsd),
                 null,
             ),
+            // A step still running or failed has no PR of its own, the thread's stays.
+            prUrl: steps.findLast((task) => task.prUrl)?.prUrl ?? null,
             last: last.id,
         };
     });

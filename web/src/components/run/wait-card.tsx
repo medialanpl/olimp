@@ -147,7 +147,7 @@ export function WaitCard({ run, wait }: { run: WorkflowRun; wait: RunWait }) {
                             href={run.prUrl}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline"
+                            className="inline-flex items-center gap-1 text-sm text-info underline-offset-4 hover:underline"
                         >
                             <ExternalLinkIcon className="size-3.5" />
                             {run.prUrl}

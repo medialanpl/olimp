@@ -41,7 +41,12 @@ function copyProd(): void {
 if (process.argv.includes("--from-prod")) copyProd();
 
 const children = [
-    spawn(process.execPath, ["--watch", "src/main.ts"], { env, stdio: "inherit" }),
+    // Only OLIMP's own files: plain --watch follows node_modules too, and a job's `pnpm install`
+    // hard-links the same store files, which restarted the API and interrupted the job.
+    spawn(process.execPath, ["--watch-path=src", "--watch-path=messages", "src/main.ts"], {
+        env,
+        stdio: "inherit",
+    }),
     spawn("pnpm", ["dev:web", "--port", "5175", "--strictPort"], { env, stdio: "inherit" }),
 ];
 // Ctrl+C reaches both; when one ends on its own, the other goes too.

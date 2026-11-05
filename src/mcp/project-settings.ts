@@ -94,8 +94,8 @@ export function registerProjectSettingsTools(server: McpServer, call: Call): voi
                 "the global one (olimp_set_instructions) and winning over it; empty clears it. " +
                 "workspace: where a task works when olimp_create_task does not say (worktree, " +
                 "checkout: the project's own folder, one task at a time; null: a worktree). " +
-                "keepWorktrees: how many finished job worktrees stay on disk (0 removes each " +
-                "when its job ends; the branch always stays). worktreeScripts (admin only): Bash " +
+                "keepWorktrees: how many finished job worktrees stay on disk (10 by default; 0 " +
+                "removes each when its job ends; the branch always stays). worktreeScripts (admin only): Bash " +
                 "scripts run as the OLIMP user in a job's worktree, in order: afterCreate before " +
                 "its agent (a failure fails the job), beforeRemove before the worktree goes (a " +
                 "failure keeps the folder); they get OLIMP_PROJECT_PATH, OLIMP_WORKTREE_PATH, " +

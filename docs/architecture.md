@@ -953,7 +953,7 @@ of that job then fails and it never starts. Otherwise it aborts the tracked job 
 seconds) until it has stopped: the agent's process group gets SIGTERM, then SIGKILL after 5
 seconds; the step stores its notes and memory as after a failure and an `error` event; the runner
 checks the signal before the worktree, between workflow steps and before the commit, so nothing is
-pushed after a cancel; the worktree is removed and the task or run, and its running step, end
+pushed after a cancel; the worktree is kept or removed as after any job and the task or run, and its running step, end
 `cancelled` with `error` `cancelled by <account>` (or `cancelled` without accounts). A job that has
 finished is `409 task.notCancellable` or `run.notCancellable`.
 
@@ -1112,8 +1112,8 @@ The Terminal tab of a task and of a workflow run (`web/src/components/terminal-p
 chunk with xterm) opens shells in the folder of its owner: a task's thread (`task:<first task>`,
 the steps share a folder) or a run (`run:<id>`); a project has no terminal of its own. A job's
 folder is its worktree while it is there (`OLIMP_HOME/worktrees/<first task or run>`), or the
-project's folder for a job that works in it; a finished job whose worktree was removed has none
-(`409 terminal.noFolder`). REST only (`src/api/terminals.ts`), for any account, since projects are
+project's folder for a job that works in it; a finished job has it while the project keeps its
+worktree (the last 10 by default, see Worktrees below), after that none (`409 terminal.noFolder`). REST only (`src/api/terminals.ts`), for any account, since projects are
 shared; the paths below are under `/api/tasks/:id` or `/api/workflow-runs/:id`:
 
 - `GET …/terminals`: `available` (with `reason` when `@lydell/node-pty` did not load, and OLIMP
@@ -1164,7 +1164,11 @@ The script posts to the panel's origin only, and obeys only it: where the page i
 clicked instead of acting on the page: a selector, the start of its HTML and text. The panel frames
 the proxy with a sandbox without top navigation (the panel's CSP allows `frame-src` of
 `http://localhost:*` and `http://127.0.0.1:*` only), opens the first address a terminal printed that
-answers, offers widths of a phone and a tablet, and hands the picked elements with a note each to
+answers and tries a page that does not answer again every few seconds. Without a page it offers to
+run the app: the worktree's `dev` script (else `start`, else its first command, or another from the
+Run menu) in a new terminal tab, after `<manager> install` in a tab of its own when the worktree has
+no `node_modules` and the project no setup scripts, and opens the first address that tab printed
+once it answers, or says the command ended or printed none in two minutes. It offers widths of a phone and a tablet, and hands the picked elements with a note each to
 the thread's reply field, or, in a run or a project, to a new task.
 
 ## Project settings
@@ -1219,9 +1223,11 @@ project's agents and commands, beside the routes of its issues, integrations and
   only the names of Claude's MCP servers in the caller's `~/.claude.json` (`mcpServers`, and the
   project folder's entry under `projects`), never their entries, which may hold keys.
 - **Worktrees**: `git worktree list` of the project's clone, limited to `OLIMP_HOME/worktrees/`.
-  With `keepWorktrees` above 0 a job's worktree stays when it ends (only `.olimp/` goes) and the
-  oldest finished ones beyond that are removed; a job that needs a branch a kept worktree holds
-  (a continuation, which then works in the same folder) removes that worktree first. Removing one keeps its branch; `POST
+  With `keepWorktrees` above 0 (10 by default) a job's worktree stays when it ends (only `.olimp/` goes) and the
+  oldest finished ones beyond that are removed; a continuation goes on in its thread's kept worktree when its branch only moves forward
+  (`git merge --ff-only` to the branch where jobs push it), so the person's terminals, installed
+  dependencies and env files stay and the setup scripts do not run again; otherwise, and for any
+  other job that needs the branch, that worktree is removed first. Removing one keeps its branch; `POST
   …/worktrees/reclaim` removes the finished ones beyond `keepWorktrees` at once. The list carries
   each worktree's size from `du`.
 

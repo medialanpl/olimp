@@ -14,7 +14,6 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { useTranslations } from "use-intl";
 import { ErrorState, FormError, UNDERLINE_TAB, UNDERLINE_TABS } from "@/components/page";
 import { StatusBadge } from "@/components/status-badge";
-import { prNumber } from "@/components/task-chat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +29,7 @@ import { freshInput, InputTokens } from "@/components/usage";
 import { api } from "@/lib/api";
 import { useFormat } from "@/lib/format";
 import { type JobKind, jobKey, jobPath, useMarkRead, useReads } from "@/lib/queries";
-import { FINISHED } from "@/lib/reads";
+import { FINISHED, prNumber } from "@/lib/reads";
 import { triggered } from "@/lib/shortcuts";
 import type { RunStatus, Usage } from "@/lib/types";
 
@@ -240,7 +239,7 @@ export function PrChip({ url }: { url: string }) {
             href={url}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-foreground hover:bg-muted"
+            className="inline-flex items-center gap-0.5 rounded-md border border-info/30 bg-info/10 px-1.5 py-0.5 text-info hover:bg-info/20"
         >
             {pr ? `#${pr}` : t("fields.pr")}
             <ArrowUpRightIcon className="size-3" />

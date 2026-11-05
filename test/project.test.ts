@@ -109,6 +109,8 @@ test("a project's own settings change field by field, and the composer's default
     const { call } = await setup();
     const fresh = await call("GET", "/api/repos/site");
     assert.deepEqual(fresh.json.settings, noSettings());
+    // The last finished worktrees stay, so a finished task still has its terminal.
+    assert.equal(fresh.json.settings.keepWorktrees, 10);
     const saved = await call("PATCH", "/api/repos/site/settings", {
         instructions: "  Answer in Polish.  ",
         workspace: "checkout",

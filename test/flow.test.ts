@@ -90,8 +90,12 @@ async function setup(agent: string, codex = "true") {
     };
     const store = await openStore(home);
     await registerRepo(store, cfg, "demo", null, "acme/demo");
+    await store.setRepoSettings("demo", removing());
     return { cfg, store, home };
 }
+
+// The pipeline tests check what goes when a job ends, so their project keeps no worktree.
+const removing = () => ({ ...noSettings(), keepWorktrees: 0 });
 
 test("a task with changes ends with a pushed branch and a pull request", async () => {
     const { cfg, store, home } = await setup('echo change > CHANGED.md; echo "edited"');
@@ -518,7 +522,7 @@ test("the global instructions open every agent's prompt", async () => {
 test("a project's own instructions follow the global ones and win over them", async () => {
     const { cfg, store } = await setup('echo "prompt: $2"; echo change > CHANGED.md');
     await store.saveSettings({ instructions: "Answer in haiku." });
-    await store.setRepoSettings("demo", { ...noSettings(), instructions: "Answer in Polish." });
+    await store.setRepoSettings("demo", { ...removing(), instructions: "Answer in Polish." });
     const task = await store.createTask({ repo: "demo", title: "Change", body: "" });
     await runTask(store, cfg, task);
     const done = await store.task(task.id);
@@ -531,7 +535,7 @@ test("a project's own instructions follow the global ones and win over them", as
 
 test("a project keeps its last finished worktrees, and a continuation works in its thread's again", async () => {
     const { cfg, store, home } = await setup("echo change >> CHANGED.md");
-    await store.setRepoSettings("demo", { ...noSettings(), keepWorktrees: 1 });
+    await store.setRepoSettings("demo", { ...removing(), keepWorktrees: 1 });
     const first = await store.createTask({ repo: "demo", title: "One", body: "" });
     await runTask(store, cfg, first);
     assert.equal((await store.task(first.id))?.status, "done");
@@ -546,7 +550,12 @@ test("a project keeps its last finished worktrees, and a continuation works in i
         (await projectWorktrees(cfg, repo)).map((tree) => [tree.id, tree.branch, tree.active]),
         [[second.id, `olimp/${second.id}`, false]],
     );
-    // The kept worktree holds the thread's branch; the continuation makes it anew in that folder.
+    // The kept worktree holds the thread's branch; the continuation goes on in it, and what the
+    // person installed there stays.
+    const tree = join(home, "worktrees", second.id);
+    appendFileSync(join(repoDir(cfg, repo), ".git", "info", "exclude"), "node_modules/\n");
+    mkdirSync(join(tree, "node_modules"));
+    writeFileSync(join(tree, "node_modules", "marker"), "installed\n");
     const next = await store.createTask({
         repo: "demo",
         title: "Three",
@@ -557,10 +566,26 @@ test("a project keeps its last finished worktrees, and a continuation works in i
     const continued = await store.task(next.id);
     assert.equal(continued?.status, "done", continued?.error ?? "");
     assert.equal(existsSync(join(home, "worktrees", next.id)), false);
-    assert.equal(
-        readFileSync(join(home, "worktrees", second.id, "CHANGED.md"), "utf8"),
-        "change\nchange\n",
-    );
+    assert.equal(readFileSync(join(tree, "CHANGED.md"), "utf8"), "change\nchange\n");
+    assert.ok(existsSync(join(tree, "node_modules", "marker")));
+    // The branch on GitHub went another way: the next continuation makes the folder anew from it.
+    const elsewhere = join(root, `elsewhere-${n}`);
+    await must("git", ["clone", "-q", "-b", `olimp/${second.id}`, bare, elsewhere]);
+    await must("git", ["-C", elsewhere, "reset", "-q", "--hard", "HEAD~2"]);
+    writeFileSync(join(elsewhere, "OTHER.md"), "other\n");
+    await must("git", ["-C", elsewhere, "add", "-A"]);
+    await must("git", ["-C", elsewhere, "commit", "-qm", "other"]);
+    await must("git", ["-C", elsewhere, "push", "-qf", "origin", `olimp/${second.id}`]);
+    const last = await store.createTask({
+        repo: "demo",
+        title: "Four",
+        body: "",
+        thread: second.id,
+    });
+    await runTask(store, cfg, last);
+    assert.equal((await store.task(last.id))?.status, "done");
+    assert.ok(existsSync(join(tree, "OTHER.md")));
+    assert.equal(existsSync(join(tree, "node_modules")), false);
     await removeProjectWorktree(cfg, repo, second.id);
     assert.equal(existsSync(join(home, "worktrees", second.id)), false);
     assert.deepEqual(await projectWorktrees(cfg, repo), []);
@@ -594,7 +619,7 @@ test("a project's worktree scripts run by Bash around a task: setup before the a
     const { cfg, store, home } = await setup("cat SETUP.txt; echo change > CHANGED.md");
     const script = (command: string, name = "") => ({ name, command, timeoutSeconds: null });
     await store.setRepoSettings("demo", {
-        ...noSettings(),
+        ...removing(),
         draftPr: true,
         worktreeScripts: {
             afterCreate: [
@@ -619,7 +644,7 @@ test("a project's worktree scripts run by Bash around a task: setup before the a
     assert.equal(existsSync(join(home, "worktrees", task.id)), false);
 
     await store.setRepoSettings("demo", {
-        ...noSettings(),
+        ...removing(),
         worktreeScripts: {
             afterCreate: [script("echo 'lockfile is out of date' >&2; exit 3", "Install")],
             beforeRemove: [],
@@ -637,7 +662,7 @@ test("a project's worktree scripts run by Bash around a task: setup before the a
 
     // A failing cleanup keeps the folder, so whatever it held can still be recovered.
     await store.setRepoSettings("demo", {
-        ...noSettings(),
+        ...removing(),
         worktreeScripts: { afterCreate: [], beforeRemove: [script("exit 4")] },
     });
     const kept = await store.createTask({ repo: "demo", title: "Kept", body: "" });

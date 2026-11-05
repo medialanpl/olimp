@@ -43,11 +43,11 @@ import { useAttachments } from "@/lib/attachments";
 import { useComposerInbox } from "@/lib/drafts";
 import { useFormat } from "@/lib/format";
 import { keys, useSubtasks, useTrace } from "@/lib/queries";
+import { prNumber } from "@/lib/reads";
 import type { AgentEvent, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const isActive = (task: Task) => task.status === "queued" || task.status === "running";
-export const prNumber = (url: string | null) => url?.match(/\/pull\/(\d+)/)?.[1] ?? null;
 export const stepAnchor = (id: string) => `step-${id}`;
 
 const CLAMP = 600;
@@ -317,7 +317,7 @@ function Footer({ task, onShowChanges }: { task: Task; onShowChanges: () => void
                     href={task.prUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className={cn(pill, "text-foreground hover:bg-muted")}
+                    className={cn(pill, "border-info/30 bg-info/10 text-info hover:bg-info/20")}
                 >
                     {pr ? t("task.chat.pr", { number: pr }) : t("fields.pr")}
                     <ArrowUpRightIcon className="size-3" />

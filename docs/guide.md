@@ -306,8 +306,8 @@ Instructions, Tasks, Agent config and Worktrees.
   `beforeRemove` while its files still exist, before any removal (a failure keeps the folder).
   They run in order as the OLIMP user, without OLIMP's own variables but with
   `OLIMP_PROJECT_PATH`, `OLIMP_WORKTREE_PATH`, `OLIMP_JOB_ID` and `OLIMP_BRANCH`, and `bash -n`
-  checks each one when saved. Also how many finished job worktrees stay on disk (`keepWorktrees`, 0 by default: removed when the job
-  ends), and the ones there now with their size; removing one or "Reclaim now" keeps the branch.
+  checks each one when saved. Also how many finished job worktrees stay on disk (`keepWorktrees`, the last 10 by default;
+  0 removes each when its job ends), and the ones there now with their size; removing one or "Reclaim now" keeps the branch.
 
 ```sh
 curl -s -X PATCH localhost:4850/api/repos/name/settings -H 'content-type: application/json' \
@@ -491,8 +491,8 @@ through one of its output ports, and the connection on that port leads to the ne
 draws and edits it (Workflows → a workflow): a palette of every node, an inspector per node, ports
 connected by dragging, a simulation that walks the graph port by port, the problems listed as you
 edit, built-in templates, YAML export and import (also of the older lists of `steps` or `skills`)
-and "Build from a description", where the project's agent plans the steps. The run's worktree goes
-when it ends (unless the project keeps finished worktrees), so a workflow that should keep its
+and "Build from a description", where the project's agent plans the steps. The run's worktree does not
+stay for good (the project keeps only its last finished ones), so a workflow that should keep its
 change commits it with `git.commit` or `github.draft-pr`, as every built-in template does.
 
 ```sh
@@ -800,7 +800,7 @@ curl -N -H "Authorization: Bearer $OLIMP_TOKEN" localhost:4850/api/events
 
 `POST /api/tasks/:id/cancel` cancels a queued task before it starts. A running task's agent gets
 SIGTERM and, 5 seconds later, SIGKILL, with everything it started; its notes and memory are kept
-as after a failure, the worktree is removed, nothing is pushed, and the task ends `cancelled` with
+as after a failure, the worktree is kept or removed as after any job, nothing is pushed, and the task ends `cancelled` with
 `error` naming who cancelled it. Workflow runs cancel the same way, the running step included.
 
 `POST /api/tasks/:id/retry` queues a finished task again: a new task with the same repository,

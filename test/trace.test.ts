@@ -13,6 +13,7 @@ import { registerRepo } from "../src/clones.ts";
 import { type Config, loadConfig } from "../src/config.ts";
 import { cancelRunning } from "../src/jobs.ts";
 import { must, run } from "../src/proc.ts";
+import { noSettings } from "../src/project.ts";
 import { runTask } from "../src/runner.ts";
 import type { Store, Task } from "../src/store.ts";
 import {
@@ -154,6 +155,8 @@ async function setup(claude: string, codex = "true") {
     const bus = new EventBus();
     const store = publishing(await openStore(home), bus);
     await registerRepo(store, cfg, "demo", null, "acme/demo");
+    // These tests check that a job's worktree goes when it ends.
+    await store.setRepoSettings("demo", { ...noSettings(), keepWorktrees: 0 });
     return { cfg, store, home, bus };
 }
 

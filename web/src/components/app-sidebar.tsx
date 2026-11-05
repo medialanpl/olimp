@@ -25,6 +25,7 @@ import {
     CopyIcon,
     FolderGit2Icon,
     FolderIcon,
+    GitPullRequestIcon,
     GripVerticalIcon,
     LayersIcon,
     LayoutDashboardIcon,
@@ -86,7 +87,7 @@ import {
     useTasks,
     useVersion,
 } from "@/lib/queries";
-import { threadsOf } from "@/lib/reads";
+import { prNumber, threadsOf } from "@/lib/reads";
 import { triggered } from "@/lib/shortcuts";
 import type { Repo, Task, TaskStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -194,7 +195,14 @@ function RecentTask({ task, pinned, close }: { task: Task; pinned: boolean; clos
                             {pinned && (
                                 <PinIcon className="size-3! shrink-0 fill-current opacity-70" />
                             )}
-                            <span>{task.title}</span>
+                            <span className="truncate">{task.title}</span>
+                            {task.prUrl && (
+                                <span className="ml-auto flex shrink-0 items-center gap-0.5 font-mono text-[0.7rem] text-info">
+                                    <GitPullRequestIcon aria-hidden="true" className="size-3" />
+                                    <span className="sr-only">{t("fields.pr")}</span>
+                                    {prNumber(task.prUrl) && `#${prNumber(task.prUrl)}`}
+                                </span>
+                            )}
                         </Link>
                     </SidebarMenuSubButton>
                 </TooltipTrigger>

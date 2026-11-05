@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { needsYou, threadsOf, unreadOf } from "../web/src/lib/reads.ts";
 
-test("a thread is one task: the first's id and title, the newest step's state, the whole cost", () => {
+test("a thread is one task: the first's id and title, the newest step's state, the whole cost, its PR", () => {
     const task = (
         id: string,
         thread: string | null,
         minute: number,
         status: string,
         costUsd: number | null,
+        prUrl: string | null = null,
     ) => ({
         id,
         title: `title ${id}`,
@@ -22,20 +23,38 @@ test("a thread is one task: the first's id and title, the newest step's state, t
         archivedAt: null,
         createdAt: `2026-11-02T10:0${minute}:00Z`,
         costUsd,
+        prUrl,
         status,
     });
     const threads = threadsOf([
         task("a2", "a", 5, "done", 0.25),
-        task("a", null, 0, "failed", 0.5),
+        task("a3", "a", 8, "failed", null),
+        task("a", null, 0, "failed", 0.5, "https://github.com/o/r/pull/5"),
         task("b", null, 1, "running", null),
         task("c3", "c", 7, "queued", null),
         task("c2", "c", 6, "done", 1),
     ]);
-    const view = threads.map((t) => [t.id, t.title, t.status, t.costUsd, t.last, t.createdAt]);
+    const view = threads.map((t) => [
+        t.id,
+        t.title,
+        t.status,
+        t.costUsd,
+        t.last,
+        t.createdAt,
+        t.prUrl,
+    ]);
     assert.deepEqual(view, [
-        ["a", "title a", "done", 0.75, "a2", "2026-11-02T10:00:00Z"],
-        ["b", "title b", "running", null, "b", "2026-11-02T10:01:00Z"],
-        ["c2", "title c2", "queued", 1, "c3", "2026-11-02T10:06:00Z"],
+        [
+            "a",
+            "title a",
+            "failed",
+            0.75,
+            "a3",
+            "2026-11-02T10:00:00Z",
+            "https://github.com/o/r/pull/5",
+        ],
+        ["b", "title b", "running", null, "b", "2026-11-02T10:01:00Z", null],
+        ["c2", "title c2", "queued", 1, "c3", "2026-11-02T10:06:00Z", null],
     ]);
 });
 

@@ -77,7 +77,7 @@ export function ChangesBody({
                         href={prUrl}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="inline-flex items-center gap-1 font-medium hover:underline"
+                        className="inline-flex items-center gap-1 font-medium text-info hover:underline"
                     >
                         {t("fields.pr")}
                         <ArrowUpRightIcon className="size-3.5" />

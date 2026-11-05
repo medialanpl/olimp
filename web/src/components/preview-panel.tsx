@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     ArrowLeftIcon,
     ArrowRightIcon,
@@ -7,6 +7,7 @@ import {
     InfoIcon,
     MonitorIcon,
     MousePointerClickIcon,
+    PlayIcon,
     RotateCwIcon,
     SendIcon,
     SmartphoneIcon,
@@ -15,14 +16,18 @@ import {
 } from "lucide-react";
 import { type FormEvent, type ReactElement, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
-import { FormError } from "@/components/page";
+import { FormError, Loading } from "@/components/page";
+import { RunMenu } from "@/components/run-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ApiError, api } from "@/lib/api";
-import { useTerminalUrls } from "@/lib/queries";
+import { keys, useTerminalCommands, useTerminalUrls } from "@/lib/queries";
+import type { DetectedUrl, ProjectCommand, TerminalSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface Opened {
@@ -40,6 +45,10 @@ export interface Pick {
 }
 
 const WIDTHS = { desktop: null, tablet: 768, mobile: 390 } as const;
+const POLL_MS = 1000;
+const RETRY_MS = 3000;
+const INSTALL_LIMIT_MS = 10 * 60_000;
+const START_LIMIT_MS = 2 * 60_000;
 type Device = keyof typeof WIDTHS;
 
 // The picked elements as the agent reads them: where, which element and what to do with it.
@@ -60,6 +69,161 @@ function Hint({ label, children }: { label: string; children: ReactElement }) {
             <TooltipTrigger asChild>{children}</TooltipTrigger>
             <TooltipContent>{label}</TooltipContent>
         </Tooltip>
+    );
+}
+
+type Start =
+    | { kind: "idle" }
+    | { kind: "installing" | "starting" | "silent"; command: string }
+    | { kind: "exited"; command: string; code: number }
+    | { kind: "failed" };
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function defaultCommand(commands: ProjectCommand[]): string | null {
+    const script = (name: string) =>
+        commands.find((c) => c.source === "package.json" && c.command.endsWith(` run ${name}`));
+    return (script("dev") ?? script("start") ?? commands[0])?.command ?? null;
+}
+
+// Starts the app in a new terminal of the owner, its dependencies installed first when the
+// worktree has none, and hands over the first address it prints that answers.
+function RunApp({ owner, onUp }: { owner: string; onUp: (url: string) => void }) {
+    const t = useTranslations("web");
+    const client = useQueryClient();
+    const found = useTerminalCommands(owner, true);
+    const [state, setState] = useState<Start>({ kind: "idle" });
+    const attempt = useRef(0);
+    useEffect(
+        () => () => {
+            attempt.current++;
+        },
+        [],
+    );
+
+    const shell = async (input: string) => {
+        const session = await api<TerminalSession>(`${owner}/terminals`, {
+            method: "POST",
+            body: { input: `${input}\r` },
+        });
+        void client.invalidateQueries({ queryKey: keys.terminals(owner) });
+        return session.id;
+    };
+    const exitOf = async (id: string) =>
+        (await api<{ sessions: TerminalSession[] }>(`${owner}/terminals`)).sessions.find(
+            (session) => session.id === id,
+        )?.exitCode ?? null;
+    const run = async (command: string) => {
+        const mine = ++attempt.current;
+        const live = () => attempt.current === mine;
+        try {
+            const install = found.data?.install;
+            if (install) {
+                setState({ kind: "installing", command: install });
+                const id = await shell(`${install} && exit 0 || exit 1`);
+                const until = Date.now() + INSTALL_LIMIT_MS;
+                let code: number | null = null;
+                while (live() && code === null && Date.now() < until) {
+                    await wait(POLL_MS);
+                    code = await exitOf(id);
+                }
+                if (!live()) return;
+                if (code !== 0) {
+                    setState(
+                        code === null
+                            ? { kind: "silent", command: install }
+                            : { kind: "exited", command: install, code },
+                    );
+                    return;
+                }
+                void client.invalidateQueries({ queryKey: keys.terminalCommands(owner) });
+            }
+            setState({ kind: "starting", command });
+            // The API's clock is this machine's: the preview works only on OLIMP's own.
+            const since = Date.now() - 1000;
+            const id = await shell(command);
+            const until = Date.now() + START_LIMIT_MS;
+            while (live() && Date.now() < until) {
+                await wait(POLL_MS);
+                const { urls } = await api<{ urls: DetectedUrl[] }>(`${owner}/terminals/urls`);
+                const up = urls.find((url) => url.running && Date.parse(url.lastSeenAt) >= since);
+                if (up && live()) {
+                    setState({ kind: "idle" });
+                    onUp(up.url);
+                    return;
+                }
+                const code = await exitOf(id);
+                if (code !== null && live()) {
+                    setState({ kind: "exited", command, code });
+                    return;
+                }
+            }
+            if (live()) setState({ kind: "silent", command });
+        } catch {
+            if (live()) setState({ kind: "failed" });
+        }
+    };
+
+    if (state.kind === "installing" || state.kind === "starting")
+        return (
+            <div
+                role="status"
+                className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center"
+            >
+                <Spinner className="size-5 text-muted-foreground" />
+                <p className="text-sm font-medium">
+                    {t(`preview.${state.kind}`, { command: state.command })}
+                </p>
+                <p className="max-w-md text-xs text-muted-foreground">
+                    {t(`preview.${state.kind}Hint`)}
+                </p>
+            </div>
+        );
+    const command = defaultCommand(found.data?.commands ?? []);
+    const install = found.data?.install;
+    const problem =
+        state.kind === "exited"
+            ? t("preview.exited", { command: state.command, code: state.code })
+            : state.kind === "silent"
+              ? t("preview.silent", { command: state.command })
+              : state.kind === "failed"
+                ? t("preview.failed")
+                : null;
+    return (
+        <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+            <div className="max-w-md space-y-1">
+                <p className="text-sm font-medium">{t("preview.runTitle")}</p>
+                <p className="text-xs text-muted-foreground">
+                    {t("preview.runHint")}
+                    {install && ` ${t("preview.runInstall", { command: install })}`}
+                </p>
+            </div>
+            {problem && (
+                <Alert variant="warning" role="status" className="max-w-md text-left">
+                    <InfoIcon />
+                    <AlertDescription>{problem}</AlertDescription>
+                </Alert>
+            )}
+            {found.isPending ? (
+                <Loading>
+                    <Skeleton className="h-8 w-44" />
+                </Loading>
+            ) : (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                    {command && (
+                        <Button size="sm" onClick={() => void run(command)}>
+                            <PlayIcon />
+                            {t("preview.run", { command })}
+                        </Button>
+                    )}
+                    <RunMenu
+                        owner={owner}
+                        label={command ? t("preview.otherCommand") : undefined}
+                        onRun={(other) => void run(other)}
+                    />
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -134,6 +298,13 @@ export default function PreviewPanel({
         window.addEventListener("message", onMessage);
         return () => window.removeEventListener("message", onMessage);
     }, [opened]);
+
+    // An app still starting answers later: the page is tried again until it does.
+    useEffect(() => {
+        if (!down) return;
+        const timer = setInterval(() => setReload((n) => n + 1), RETRY_MS);
+        return () => clearInterval(timer);
+    }, [down]);
 
     // The first address a terminal printed that answers opens by itself.
     const running = urls.find((url) => url.running)?.url;
@@ -341,10 +512,7 @@ export default function PreviewPanel({
                         <AlertDescription>{t("preview.remote")}</AlertDescription>
                     </Alert>
                 ) : !opened ? (
-                    <Alert variant="info" role="note" className="m-3 w-auto">
-                        <InfoIcon />
-                        <AlertDescription>{t("preview.empty")}</AlertDescription>
-                    </Alert>
+                    <RunApp owner={owner} onUp={(url) => open.mutate(url)} />
                 ) : (
                     <>
                         {down && (

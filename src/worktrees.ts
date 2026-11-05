@@ -22,6 +22,8 @@ export interface Worktree {
     inPlace: boolean;
     // OLIMP commits the agent's changes on `branch` and pushes them.
     commits: boolean;
+    // A continuation's kept worktree, already set up.
+    reused?: boolean;
 }
 
 export const branchOf = (id: string) => `olimp/${id}`;
@@ -108,9 +110,6 @@ async function addWorktree(
     // A continuation finds the branch where jobs push it: origin, or the clone's fork.
     const pushedTo = repo.github ? `${await pushRemote(w.clone)}/` : "";
     try {
-        // A finished job's kept worktree, or one left by a crash, may still hold the branch.
-        for (const kept of await worktreesOf(w.clone, dirname(w.tree)))
-            if (kept.branch === w.branch && !kept.active) await retireTree(repo, w.clone, kept);
         const pushed =
             continued &&
             (
@@ -123,6 +122,21 @@ async function addWorktree(
                     repo.github ? `refs/remotes/${pushedTo}${branch}` : `refs/heads/${branch}`,
                 ])
             ).code === 0;
+        const start = pushed
+            ? `${pushedTo}${branch}`
+            : localBase && base
+              ? base
+              : `${remote}${base ?? repo.defaultBranch}`;
+        // A finished job's kept worktree, or one left by a crash, may still hold the branch. A
+        // continuation stays in its thread's, with the person's terminals, dependencies and env
+        // files, when the branch only moves forward; otherwise the folder is made anew.
+        for (const kept of await worktreesOf(w.clone, dirname(w.tree))) {
+            if (kept.branch !== w.branch || kept.active) continue;
+            const forward = ["-C", w.tree, "merge", "--ff-only", "-q", start];
+            if (continued && kept.path === w.tree && (await run("git", forward)).code === 0)
+                return { ...w, reused: true };
+            await retireTree(repo, w.clone, kept);
+        }
         await must("git", [
             "-C",
             w.clone,
@@ -132,11 +146,7 @@ async function addWorktree(
             continued ? "-B" : "-b",
             w.branch,
             w.tree,
-            pushed
-                ? `${pushedTo}${branch}`
-                : localBase && base
-                  ? base
-                  : `${remote}${base ?? repo.defaultBranch}`,
+            start,
         ]);
         if (existsSync(join(w.tree, OLIMP_DIR)))
             throw new Error(
@@ -286,6 +296,7 @@ async function runScripts(
 export async function setUp(w: Worktree): Promise<void> {
     if (w.inPlace) return;
     await seedLocalLayer(w.clone, w.tree);
+    if (w.reused) return;
     const failed = await runScripts(w.repo.settings.worktreeScripts.afterCreate, w.clone, {
         path: w.tree,
         branch: w.branch,

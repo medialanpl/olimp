@@ -89,7 +89,7 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
                       task.repo,
                       task.workspace === "branch" ? branch : null,
                   );
-        // Opening retired the thread's kept worktree; parked, nothing reclaims the new one meanwhile.
+        // The thread's worktree is this job's now; parked, nothing reclaims it meanwhile.
         if (task.thread) parked.add(task.thread);
         if (w.branch !== branch) await store.update(task.id, { branch: w.branch });
         await setUp(w);

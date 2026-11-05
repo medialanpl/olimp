@@ -363,7 +363,7 @@ const COLUMNS: DataTableColumnDef<Row>[] = [
         cell: ({ row }) =>
             row.original.prUrl ? (
                 <a href={row.original.prUrl} target="_blank" rel="noreferrer">
-                    <Badge variant="outline" className="tabular-nums">
+                    <Badge variant="info" className="tabular-nums">
                         #{row.original.prUrl.split("/").pop()}
                         <ArrowUpRightIcon />
                     </Badge>

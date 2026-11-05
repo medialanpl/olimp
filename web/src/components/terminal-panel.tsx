@@ -6,16 +6,16 @@ import {
     CircleIcon,
     ExternalLinkIcon,
     InfoIcon,
-    PlayIcon,
     PlusIcon,
     SquareIcon,
     SquareTerminalIcon,
     XIcon,
 } from "lucide-react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { CopyButton } from "@/components/copy-button";
-import { FormError, Loading } from "@/components/page";
+import { FormError } from "@/components/page";
+import { RunMenu } from "@/components/run-menu";
 import { TerminalSkeleton } from "@/components/skeletons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -35,13 +35,10 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api";
 import { onTerminalOutput } from "@/lib/events";
-import { keys, useTerminalCommands, useTerminals, useTerminalUrls } from "@/lib/queries";
+import { keys, useTerminals, useTerminalUrls } from "@/lib/queries";
 import { comboOf, keyMap } from "@/lib/shortcuts";
 import type { TerminalOutput, TerminalSession } from "@/lib/types";
 import { cn, themeColor } from "@/lib/utils";
@@ -242,98 +239,6 @@ function DetectedUrls({ owner }: { owner: string }) {
                 </span>
             ))}
         </div>
-    );
-}
-
-// Commands the worktree's files define, each run in a new tab, and one typed by hand.
-function RunMenu({ owner, onRun }: { owner: string; onRun: (command: string) => void }) {
-    const t = useTranslations("web");
-    const [open, setOpen] = useState(false);
-    const [custom, setCustom] = useState("");
-    const found = useTerminalCommands(owner, open);
-    const run = (command: string) => {
-        setOpen(false);
-        setCustom("");
-        onRun(command);
-    };
-    const submit = (event: FormEvent) => {
-        event.preventDefault();
-        if (custom.trim()) run(custom.trim());
-    };
-    const commands = found.data?.commands ?? [];
-    const install = found.data?.install;
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button variant="ghost" size="xs">
-                    <PlayIcon />
-                    {t("terminal.run")}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-96 max-w-[calc(100vw-2rem)] space-y-3 p-3">
-                <p className="text-sm font-medium">{t("terminal.commands")}</p>
-                {found.isPending ? (
-                    <Loading className="space-y-1.5">
-                        <Skeleton className="h-8 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                    </Loading>
-                ) : (
-                    <>
-                        {install && (
-                            <button
-                                type="button"
-                                onClick={() => run(install)}
-                                className="flex w-full flex-col rounded-lg px-2 py-1.5 text-left hover:bg-muted"
-                            >
-                                <span className="font-mono text-xs">{install}</span>
-                                <span className="text-xs text-muted-foreground">
-                                    {t("terminal.install")}
-                                </span>
-                            </button>
-                        )}
-                        {commands.length ? (
-                            <ul className="scroll-fade max-h-64 space-y-0.5 overflow-y-auto">
-                                {commands.map((command) => (
-                                    <li key={`${command.source}:${command.command}`}>
-                                        <button
-                                            type="button"
-                                            title={command.detail}
-                                            onClick={() => run(command.command)}
-                                            className="flex w-full items-baseline justify-between gap-3 rounded-lg px-2 py-1.5 text-left hover:bg-muted"
-                                        >
-                                            <span className="min-w-0 truncate font-mono text-xs">
-                                                {command.command}
-                                            </span>
-                                            <span className="shrink-0 text-xs text-muted-foreground">
-                                                {command.source}
-                                            </span>
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            !install && (
-                                <p className="text-xs text-muted-foreground">
-                                    {t("terminal.noCommands")}
-                                </p>
-                            )
-                        )}
-                    </>
-                )}
-                <form onSubmit={submit} className="space-y-1.5 border-t pt-3">
-                    <label htmlFor="terminal-command" className="text-xs text-muted-foreground">
-                        {t("terminal.custom")}
-                    </label>
-                    <Input
-                        id="terminal-command"
-                        value={custom}
-                        onChange={(e) => setCustom(e.target.value)}
-                        placeholder={t("terminal.customPlaceholder")}
-                        className="h-8 font-mono text-xs"
-                    />
-                </form>
-            </PopoverContent>
-        </Popover>
     );
 }
 
