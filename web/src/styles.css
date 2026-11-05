@@ -1,0 +1,192 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./shadcn.css";
+@import "./glass.css";
+@import "./orb.css";
+@source "../../node_modules/streamdown/dist/*.js";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* The infra panel's palette; Ochre stays only in the OLIMP mark (docs/brand). */
+:root {
+    --eggshell: oklch(0.992 0.001 17.2);
+    --taupe: oklch(0.965 0.003 67.8);
+    --stone: oklch(0.932 0.006 75.4);
+    --ink: oklch(0 0 0);
+    --graphite: oklch(0.374 0.01 73.6);
+    --smoke: oklch(0.552 0.014 75.3);
+    --ash: oklch(0.705 0.013 75.3);
+
+    --radius: 0.625rem;
+    --background: var(--eggshell);
+    --foreground: var(--ink);
+    --card: var(--eggshell);
+    --card-foreground: var(--ink);
+    --popover: var(--eggshell);
+    --popover-foreground: var(--ink);
+    --primary: var(--ink);
+    --primary-foreground: var(--eggshell);
+    --secondary: var(--taupe);
+    --secondary-foreground: var(--ink);
+    --muted: var(--taupe);
+    --muted-foreground: var(--smoke);
+    --accent: var(--taupe);
+    --accent-foreground: var(--ink);
+    --destructive: oklch(0.577 0.245 27.325);
+    --constructive: oklch(0.5 0.14 145.5);
+    --warning: oklch(0.53 0.13 62);
+    --info: oklch(0.55 0.2 259.8);
+    --border: var(--stone);
+    --input: var(--stone);
+    --ring: var(--graphite);
+    --brand: #b87a20;
+    --shadow-whisper:
+        0 0 1px 0 oklch(0 0 0 / 40%), 0 1px 1px 0 oklch(0 0 0 / 4%), 0 2px 4px 0 oklch(0 0 0 / 4%);
+    --sidebar: var(--taupe);
+    --sidebar-foreground: var(--graphite);
+    --sidebar-primary: var(--ink);
+    --sidebar-primary-foreground: var(--eggshell);
+    --sidebar-accent: var(--eggshell);
+    --sidebar-accent-foreground: var(--ink);
+    --sidebar-border: var(--stone);
+    --sidebar-ring: var(--ash);
+}
+
+.dark {
+    --background: oklch(0.165 0.004 67);
+    --foreground: oklch(0.975 0.003 67);
+    --card: oklch(0.2 0.005 67);
+    --card-foreground: oklch(0.975 0.003 67);
+    --popover: oklch(0.2 0.005 67);
+    --popover-foreground: oklch(0.975 0.003 67);
+    --primary: var(--eggshell);
+    --primary-foreground: var(--ink);
+    --secondary: oklch(0.26 0.006 67);
+    --secondary-foreground: oklch(0.975 0.003 67);
+    --muted: oklch(0.26 0.006 67);
+    --muted-foreground: oklch(0.72 0.012 75);
+    --accent: oklch(0.26 0.006 67);
+    --accent-foreground: oklch(0.975 0.003 67);
+    --destructive: oklch(0.704 0.191 22.216);
+    --constructive: oklch(0.76 0.17 145);
+    --warning: oklch(0.8 0.14 75);
+    --info: oklch(0.72 0.15 259.8);
+    --border: oklch(0.95 0.01 75 / 10%);
+    --input: oklch(0.95 0.01 75 / 15%);
+    --ring: oklch(0.6 0.012 75);
+    --brand: #d39a45;
+    --shadow-whisper: 0 0 0 1px oklch(0.95 0.01 75 / 10%);
+    --sidebar: oklch(0.14 0.004 67);
+    --sidebar-foreground: oklch(0.85 0.008 75);
+    --sidebar-primary: var(--eggshell);
+    --sidebar-primary-foreground: var(--ink);
+    --sidebar-accent: oklch(0.24 0.006 67);
+    --sidebar-accent-foreground: oklch(0.975 0.003 67);
+    --sidebar-border: oklch(0.95 0.01 75 / 10%);
+    --sidebar-ring: oklch(0.6 0.012 75);
+}
+
+@theme inline {
+    --font-sans:
+        "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+        sans-serif;
+    --font-heading: var(--font-sans);
+    --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-constructive: var(--constructive);
+    --color-warning: var(--warning);
+    --color-info: var(--info);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-brand: var(--brand);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+    --radius-card: 20px;
+    --shadow-whisper: var(--shadow-whisper);
+    --header-height: 3rem;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    html {
+        @apply font-sans;
+        color-scheme: light;
+        scrollbar-color: var(--border) transparent;
+    }
+    html.dark {
+        color-scheme: dark;
+    }
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+    body {
+        @apply bg-background text-foreground antialiased;
+        letter-spacing: 0.01em;
+        font-feature-settings:
+            "rlig" 1,
+            "calt" 1;
+    }
+    ::selection {
+        background: color-mix(in oklab, var(--info) 28%, transparent);
+    }
+    [data-slot="sidebar-inner"] {
+        @apply bg-transparent!;
+    }
+}
+
+@keyframes olimp-orbit {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.olimp-orbit {
+    transform-box: view-box;
+    transform-origin: 128px 128px;
+    animation: olimp-orbit 1.2s steps(12) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .olimp-orbit {
+        animation: none;
+    }
+}
+
+/* shiki's dual-theme tokens (defaultColor: false) carry both colours as variables. */
+.shiki-code span {
+    color: var(--shiki-light);
+}
+.dark .shiki-code span {
+    color: var(--shiki-dark);
+}

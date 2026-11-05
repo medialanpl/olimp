@@ -1,0 +1,22 @@
+# MySQL for local work and `pnpm test:mysql`. Development passwords only, matching .env.example;
+# never reuse them for a database that holds real data.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: olimp-root
+      MYSQL_DATABASE: olimp
+      MYSQL_USER: olimp
+      MYSQL_PASSWORD: olimp
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-polimp-root"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  mysql:

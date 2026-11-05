@@ -1,0 +1,386 @@
+/* The kit's glass icon of empty states, as in the infra panel and Corivo. */
+.icon-stack {
+    display: inline-grid;
+    place-items: center;
+}
+
+.icon-stack > * {
+    grid-area: 1 / 1;
+}
+
+.icon-trace {
+    display: inline-grid;
+    color: var(--color-primary);
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+}
+
+@keyframes empty-media-in {
+    from {
+        opacity: 0;
+        transform: scale(0.94);
+    }
+}
+
+@keyframes empty-rise {
+    from {
+        opacity: 0;
+        transform: translateY(0.375rem);
+    }
+}
+
+@keyframes glass-reflection-sweep {
+    0%,
+    100% {
+        opacity: 0.6;
+        transform: translate(-26%, 6%) rotate(-5deg);
+    }
+    50% {
+        opacity: 0.95;
+        transform: translate(26%, -6%) rotate(5deg);
+    }
+}
+
+@keyframes glass-reflection-ground {
+    0%,
+    100% {
+        opacity: 0.75;
+        transform: translate(8%, 4%) scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-10%, -4%) scale(1.15);
+    }
+}
+
+@keyframes glass-mark-drift {
+    0%,
+    100% {
+        transform: rotateX(13deg) rotateY(-30deg) translateZ(0);
+    }
+    25% {
+        transform: rotateX(5deg) rotateY(-11deg) translateZ(7px);
+    }
+    50% {
+        transform: rotateX(13deg) rotateY(30deg) translateZ(0);
+    }
+    75% {
+        transform: rotateX(21deg) rotateY(11deg) translateZ(7px);
+    }
+}
+@keyframes glass-mark-nod {
+    0%,
+    100% {
+        transform: rotateX(-16deg) rotateY(11deg) translateZ(0);
+    }
+    25% {
+        transform: rotateX(4deg) rotateY(-13deg) translateZ(7px);
+    }
+    50% {
+        transform: rotateX(26deg) rotateY(-9deg) translateZ(0);
+    }
+    75% {
+        transform: rotateX(5deg) rotateY(13deg) translateZ(7px);
+    }
+}
+
+@keyframes icon-orbit-light {
+    0% {
+        stroke-dashoffset: calc(var(--stroke-len, 24) * 0.3);
+    }
+    45%,
+    100% {
+        stroke-dashoffset: calc(var(--stroke-len, 24) * -1);
+    }
+}
+
+@keyframes glass-glow-breathe {
+    0%,
+    100% {
+        opacity: var(--glass-glow-min, 0.16);
+    }
+    50% {
+        opacity: var(--glass-glow-max, 0.26);
+    }
+}
+
+.empty-glass {
+    --glass-ink: oklch(0.552 0.014 75.3);
+    --glass-depth-scale: 0.65;
+    --glass-light: oklch(1 0 0 / 92%);
+    --glass-ring-base: oklch(0.374 0.01 73.6 / 16%);
+    --glass-edge-a: oklch(1 0 0 / 70%);
+    --glass-edge-b: oklch(1 0 0 / 85%);
+    --glass-shadow: oklch(0.3 0.012 67 / 24%);
+    --glass-glow-top: oklch(0.8 0.018 75);
+    --glass-glow-bottom: oklch(0.56 0.02 70);
+    --glass-glow-min: 0.1;
+    --glass-glow-max: 0.17;
+    --glass-face-top: oklch(0.955 0.004 68 / 96%);
+    --glass-face-mid: oklch(0.915 0.006 72 / 95%);
+    --glass-face-bottom: oklch(0.865 0.009 75 / 96%);
+    --glass-face-edge: oklch(1 0 0 / 90%);
+    --glass-reflect-core: oklch(1 0 0 / 68%);
+    --glass-reflect-halo: oklch(1 0 0 / 24%);
+    --glass-sweep-core: oklch(1 0 0 / 58%);
+    --glass-sweep-halo: oklch(1 0 0 / 20%);
+    --glass-mark-shadow: oklch(0.25 0.01 67 / 16%);
+    --glass-trace-display: none;
+    position: relative;
+    display: grid;
+    border-radius: var(--radius-4xl, 2rem);
+    box-shadow: 0 16px 32px -18px var(--glass-shadow);
+    color: var(--glass-ink);
+    isolation: isolate;
+    perspective: 420px;
+    perspective-origin: 50% 45%;
+    place-items: center;
+}
+
+.dark .empty-glass {
+    --glass-ink: oklch(0.975 0.003 67);
+    --glass-light: oklch(1 0 0 / 78%);
+    --glass-ring-base: oklch(0.95 0.01 75 / 10%);
+    --glass-edge-a: oklch(0.98 0.006 75 / 28%);
+    --glass-edge-b: oklch(0.98 0.006 75 / 42%);
+    --glass-shadow: oklch(0 0 0 / 55%);
+    --glass-glow-top: oklch(0.88 0.01 75);
+    --glass-glow-bottom: oklch(0.55 0.014 70);
+    --glass-glow-min: 0.16;
+    --glass-glow-max: 0.26;
+    --glass-face-top: oklch(0.26 0.006 67 / 96%);
+    --glass-face-mid: oklch(0.155 0.004 67 / 95%);
+    --glass-face-bottom: oklch(0.1 0.003 67 / 96%);
+    --glass-face-edge: oklch(0.98 0.006 75 / 16%);
+    --glass-reflect-core: oklch(1 0 0 / 22%);
+    --glass-reflect-halo: oklch(1 0 0 / 7%);
+    --glass-sweep-core: oklch(1 0 0 / 16%);
+    --glass-sweep-halo: oklch(1 0 0 / 5%);
+    --glass-mark-shadow: oklch(0 0 0 / 45%);
+    --glass-trace-display: inline-grid;
+}
+
+.empty-glass-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300px;
+    height: 100px;
+    border-radius: 100px;
+    background: linear-gradient(180deg, var(--glass-glow-top) 0%, var(--glass-glow-bottom) 100%);
+    filter: blur(44px);
+    opacity: var(--glass-glow-min);
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    z-index: -1;
+}
+
+.empty-glass-ring {
+    position: absolute;
+    background:
+        conic-gradient(
+            from 0deg,
+            transparent 0deg,
+            transparent 78deg,
+            var(--glass-edge-a) 112deg,
+            var(--glass-light) 155deg,
+            var(--glass-edge-b) 190deg,
+            transparent 224deg,
+            transparent 360deg
+        ),
+        var(--glass-ring-base);
+    clip-path: path(
+        "M 40 0 C 60.49 0 64.53 0 68.96 1.51 C 73.58 3.25 76.75 6.42 78.49 11.04 C 80 15.47 80 19.51 80 40 C 80 60.49 80 64.53 78.49 68.96 C 76.75 73.58 73.58 76.75 68.96 78.49 C 64.53 80 60.49 80 40 80 C 19.51 80 15.47 80 11.04 78.49 C 6.42 76.75 3.25 73.58 1.51 68.96 C 0 64.53 0 60.49 0 40 C 0 19.51 0 15.47 1.51 11.04 C 3.25 6.42 6.42 3.25 11.04 1.51 C 15.47 0 19.51 0 40 0"
+    );
+    inset: 0;
+    pointer-events: none;
+}
+
+.empty-glass-face {
+    position: absolute;
+    clip-path: path(
+        "M 39 0 C 58.98 0 62.92 0 67.24 1.47 C 71.74 3.16 74.84 6.26 76.53 10.76 C 78 15.08 78 19.02 78 39 C 78 58.98 78 62.92 76.53 67.24 C 74.84 71.74 71.74 74.84 67.24 76.53 C 62.92 78 58.98 78 39 78 C 19.02 78 15.08 78 10.76 76.53 C 6.26 74.84 3.16 71.74 1.47 67.24 C 0 62.92 0 58.98 0 39 C 0 19.02 0 15.08 1.47 10.76 C 3.16 6.26 6.26 3.16 10.76 1.47 C 15.08 0 19.02 0 39 0"
+    );
+    background: linear-gradient(
+        157deg,
+        var(--glass-face-top) 0%,
+        var(--glass-face-mid) 52%,
+        var(--glass-face-bottom) 100%
+    );
+    box-shadow: inset 0 1px 0 var(--glass-face-edge);
+    backdrop-filter: blur(8px) saturate(140%);
+    inset: 1px;
+    pointer-events: none;
+}
+
+.empty-glass-face::before {
+    content: "";
+    position: absolute;
+    background: radial-gradient(
+        60% 55% at 74% 88%,
+        var(--glass-reflect-core) 0%,
+        var(--glass-reflect-halo) 45%,
+        transparent 72%
+    );
+    inset: -20%;
+}
+
+.empty-glass-face::after {
+    content: "";
+    position: absolute;
+    background: linear-gradient(
+        112deg,
+        transparent 30%,
+        var(--glass-sweep-core) 46%,
+        var(--glass-sweep-halo) 58%,
+        transparent 70%
+    );
+    inset: -40% -55%;
+}
+
+.empty-glass-mark {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    transform-style: preserve-3d;
+}
+
+.empty-glass-mark > * {
+    grid-area: 1 / 1;
+}
+
+.empty-glass-depth {
+    display: grid;
+    backface-visibility: hidden;
+    color: var(--glass-depth-light);
+    place-items: center;
+    pointer-events: none;
+    transform-style: preserve-3d;
+}
+
+.dark .empty-glass-depth {
+    color: var(--glass-depth-dark);
+}
+
+.empty-glass-depth svg {
+    stroke-width: 2.4;
+}
+
+.empty-glass-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+}
+
+.icon-orbit > svg {
+    color: var(--glass-ink);
+    stroke: url(#glass-mark-light) var(--glass-ink);
+    filter: drop-shadow(0 2px 3px var(--glass-mark-shadow));
+}
+
+.dark .icon-orbit > svg {
+    stroke: url(#glass-mark) var(--glass-ink);
+}
+
+.icon-orbit .icon-trace {
+    display: var(--glass-trace-display, inline-grid);
+    color: oklch(1 0 0);
+    filter: drop-shadow(0 0 5px oklch(1 0 0 / 65%));
+}
+
+.icon-orbit .icon-trace :is(path, circle, ellipse, line, polyline, polygon, rect) {
+    stroke-dasharray: calc(var(--stroke-len, 24) * 0.3) var(--stroke-len, 24);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-slot="empty-icon"][data-variant="icon"] {
+        animation: empty-media-in 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .empty-glass-face::after {
+        animation: glass-reflection-sweep 9s ease-in-out infinite;
+    }
+
+    .empty-glass-face::before {
+        animation: glass-reflection-ground 9s ease-in-out infinite;
+    }
+
+    .empty-glass-mark {
+        animation: glass-mark-drift 9s ease-in-out infinite;
+    }
+
+    .empty-glass-glow {
+        animation: glass-glow-breathe 8s ease-in-out infinite;
+    }
+
+    .empty-glass[data-drift="b"] .empty-glass-face::before,
+    .empty-glass[data-drift="b"] .empty-glass-face::after,
+    .empty-glass[data-drift="b"] .empty-glass-mark {
+        animation-direction: reverse;
+        animation-delay: -3s;
+    }
+
+    .empty-glass[data-drift="c"] .empty-glass-face::before,
+    .empty-glass[data-drift="c"] .empty-glass-face::after,
+    .empty-glass[data-drift="c"] .empty-glass-mark {
+        animation-delay: -6s;
+    }
+
+    .empty-glass[data-drift="c"] .empty-glass-mark {
+        animation-name: glass-mark-nod;
+    }
+
+    .empty-glass[data-drift="b"] {
+        --trace-shift: 1600ms;
+    }
+
+    .empty-glass[data-drift="c"] {
+        --trace-shift: 3100ms;
+    }
+
+    .empty-glass[data-paused="true"] .empty-glass-face::before,
+    .empty-glass[data-paused="true"] .empty-glass-face::after,
+    .empty-glass[data-paused="true"] .empty-glass-mark,
+    .empty-glass[data-paused="true"] .empty-glass-glow,
+    .empty-glass[data-paused="true"] .icon-orbit > .icon-trace > svg > * {
+        animation-play-state: paused;
+    }
+
+    .icon-orbit .icon-trace {
+        opacity: 1;
+    }
+    .icon-orbit > .icon-trace > svg > :is(path, circle, ellipse, line, polyline, polygon, rect) {
+        animation: icon-orbit-light 5s cubic-bezier(0.45, 0, 0.3, 1)
+            calc(300ms + var(--trace-shift, 0ms)) infinite;
+    }
+    .icon-orbit > .icon-trace > svg > :nth-child(2) {
+        animation-delay: calc(460ms + var(--trace-shift, 0ms));
+    }
+    .icon-orbit > .icon-trace > svg > :nth-child(3) {
+        animation-delay: calc(620ms + var(--trace-shift, 0ms));
+    }
+    .icon-orbit > .icon-trace > svg > :nth-child(n + 4) {
+        animation-delay: calc(780ms + var(--trace-shift, 0ms));
+    }
+
+    [data-slot="empty-title"] {
+        animation: empty-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+    }
+    [data-slot="empty-description"] {
+        animation: empty-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+    }
+    [data-slot="empty-content"] {
+        animation: empty-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) 240ms both;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .empty-glass-face::after {
+        opacity: 0.8;
+        transform: translate(-14%, 3%) rotate(-3deg);
+    }
+    .empty-glass-face::before {
+        opacity: 0.9;
+    }
+}

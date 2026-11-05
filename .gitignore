@@ -1,0 +1,7 @@
+node_modules/
+web/dist/
+.olimp/
+.env
+.env.*
+!.env.example
+.history

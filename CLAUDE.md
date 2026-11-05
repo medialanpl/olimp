@@ -1,0 +1,3 @@
+# CLAUDE.md: OLIMP
+
+@AGENTS.md

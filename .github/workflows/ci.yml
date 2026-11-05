@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # Reads the pnpm version from packageManager in package.json.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Checks the API and, with -p web, the panel.
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm run test
+      - run: pnpm build
+
+  # The same suite on MySQL and on MariaDB (the version of the maintainer's hosting): every test
+  # creates and drops its own database there.
+  test-db:
+    name: test-${{ matrix.db }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - db: mysql
+            image: mysql:8.4
+            ping: mysqladmin ping -h 127.0.0.1 -uroot -polimp-root
+          - db: mariadb
+            image: mariadb:11.4
+            ping: mariadb-admin ping -h 127.0.0.1 -uroot -polimp-root
+    services:
+      db:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_ROOT_PASSWORD: olimp-root
+          MARIADB_ROOT_PASSWORD: olimp-root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "${{ matrix.ping }}"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      OLIMP_TEST_MYSQL_URL: mysql://root:olimp-root@127.0.0.1:3306
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test

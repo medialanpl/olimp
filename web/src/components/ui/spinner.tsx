@@ -1,0 +1,11 @@
+import { Loader2 } from "lucide-react";
+import type * as React from "react";
+import { cn } from "@/lib/utils";
+
+function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+    return (
+        <Loader2 data-slot="spinner" className={cn("size-4 animate-spin", className)} {...props} />
+    );
+}
+
+export { Spinner };
