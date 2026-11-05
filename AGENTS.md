@@ -1,8 +1,8 @@
 # AGENTS.md: OLIMP
 
-Instructions for AI agents working on OLIMP. What OLIMP is and how to run it: [README.md](README.md);
-how it is built: [docs/architecture.md](docs/architecture.md); what comes next:
-[docs/roadmap.md](docs/roadmap.md).
+Instructions for AI agents working on OLIMP. What OLIMP is: [README.md](README.md); how to run,
+use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it is built:
+[docs/architecture.md](docs/architecture.md); what comes next: [docs/roadmap.md](docs/roadmap.md).
 
 ## Language
 
