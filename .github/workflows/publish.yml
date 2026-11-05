@@ -1,0 +1,32 @@
+name: publish
+
+# A tag vX.Y.Z stages olimp-run X.Y.Z on npm through its trusted publisher (OIDC, no token). It
+# reaches npm only when the maintainer approves it with 2FA: `npm stage approve <id>`.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - name: The tag is package.json's version
+        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm run test
+      - run: pnpm run package
+      - run: npm stage publish .package/olimp-run

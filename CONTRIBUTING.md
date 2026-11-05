@@ -80,16 +80,23 @@ pnpm run package      # .package/olimp-run (src/ compiled to JS, the panel built
 ```
 
 Try the tarball as a user would, with a HOME, data and port of its own so no running OLIMP is
-touched, then publish:
+touched:
 
 ```sh
 cd some-repo && HOME=/tmp/try OLIMP_HOME=/tmp/try/olimp OLIMP_PORT=4880 \
   npx --yes --package /path/to/olimp/.package/olimp-run-<version>.tgz olimp-run
-npm publish .package/olimp-run
 ```
 
-Bump `version` in `package.json` for every release; the panel's version window compares it with
-npm's latest.
+A release is a tag on `main` matching `version` in `package.json`, which the panel's version window
+compares with npm's latest. The tag runs `.github/workflows/publish.yml`: the tests, the package and
+`npm stage publish` through npm's trusted publisher, without a token. The version reaches npm once
+the maintainer approves it with 2FA:
+
+```sh
+git tag v0.0.7 && git push origin v0.0.7
+npm stage list olimp-run          # once the workflow is done
+npm stage approve <stage id>
+```
 
 ## How work is done
 
