@@ -17,7 +17,12 @@ const proxy: ProxyOptions = {
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-    server: { port: 5173, proxy: { "/api": proxy, "/health": proxy } },
+    server: {
+        host: "127.0.0.1",
+        port: 5175,
+        strictPort: true,
+        proxy: { "/api": proxy, "/health": proxy },
+    },
     // One bundle of about 180 kB gzipped, cached as immutable: no code splitting needed yet.
     build: { outDir: "dist", emptyOutDir: true, chunkSizeWarningLimit: 800 },
 });

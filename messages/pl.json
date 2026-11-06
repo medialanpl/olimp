@@ -347,6 +347,7 @@
             "workflows": "Workflowy",
             "projects": "Projekty",
             "costs": "Koszty",
+            "apiDocs": "Dokumentacja API",
             "newTask": "Nowe zadanie",
             "menu": "Menu",
             "toggleSidebar": "Zwiń lub rozwiń menu",

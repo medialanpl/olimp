@@ -3,6 +3,7 @@ import { createServer } from "node:net";
 import { AGENTS } from "./agents.ts";
 import { addFolder } from "./api/projects.ts";
 import { createApi } from "./api.ts";
+import { banner } from "./banner.ts";
 import { EventBus, publishing } from "./bus.ts";
 import { ensureSandbox } from "./clones.ts";
 import type { Config } from "./config.ts";
@@ -11,7 +12,7 @@ import { startAutoMerge } from "./github.ts";
 import { HttpError } from "./http.ts";
 import { t } from "./i18n.ts";
 import { startIssuePoller } from "./issues.ts";
-import { startUpdateCheck } from "./machine.ts";
+import { currentVersion, startUpdateCheck } from "./machine.ts";
 import { loadMail } from "./mail.ts";
 import { ensureUpkeep } from "./memory-upkeep.ts";
 import { closeAllPreviews } from "./preview.ts";
@@ -35,7 +36,7 @@ const portFree = (port: number) =>
     });
 
 // The repository OLIMP was started in (`cd my-repo && npx olimp-run`), unless it is a project.
-async function openFolder(store: Store, cfg: Config, folder: string): Promise<void> {
+async function openFolder(store: Store, cfg: Config, folder: string): Promise<string | null> {
     const real = (path: string) => {
         try {
             return realpathSync(path);
@@ -43,51 +44,57 @@ async function openFolder(store: Store, cfg: Config, folder: string): Promise<vo
             return path;
         }
     };
-    if ((await store.repos()).some((repo) => repo.path && real(repo.path) === folder)) return;
+    const known = (await store.repos()).find((repo) => repo.path && real(repo.path) === folder);
+    if (known) return known.id;
     try {
-        const repo = await addFolder(store, cfg, null, folder);
-        console.log(`project ${repo.id}: ${folder}`);
+        return (await addFolder(store, cfg, null, folder)).id;
     } catch (error) {
         const reason =
             error instanceof HttpError ? t("en", error.code, error.params) : String(error);
         console.warn(`${folder} is not a project: ${reason}`);
+        return null;
     }
 }
 
 export async function start(folder: string | null = null): Promise<void> {
     const base = loadConfig();
+    // In a terminal the facts wait for the banner; in a log each is a line as it comes.
+    const tty = process.stdout.isTTY;
+    const facts: [string, string][] = [];
+    const info = (label: string, value: string) =>
+        tty ? facts.push([label, value]) : console.log(`${label.toLowerCase()}: ${value}`);
+    const missing = new Set<string>();
     // The agents but claude are optional: without one only the steps that use it fail.
     const optional = Object.fromEntries(
         await Promise.all(
             AGENTS.filter((agent) => agent !== "claude").map(async (agent) => {
                 const bin = base[agent];
                 const found = bin ? await resolveBin(bin).catch(() => null) : null;
-                if (!found)
+                if (!found) missing.add(agent);
+                if (!found && !tty)
                     console.warn(`${agent} not found (${bin}): steps on ${agent} will fail`);
                 return [agent, found];
             }),
         ),
     );
     // claude and gh keep their name when missing: OLIMP starts, and what needs them fails saying so.
-    const kept = (name: string, effect: string) =>
-        resolveBin(name).catch(() => {
-            console.warn(`${name} not found: ${effect}`);
-            return name;
+    const kept = (tool: "claude" | "gh", effect: string) =>
+        resolveBin(base[tool]).catch(() => {
+            missing.add(tool);
+            console.warn(`${base[tool]} not found: ${effect}`);
+            return base[tool];
         });
     const cfg = {
         ...base,
         ...optional,
-        claude: await kept(base.claude, "steps on claude fail; pick another default agent"),
-        gh: await kept(base.gh, "GitHub projects fail until the GitHub CLI is installed"),
+        claude: await kept("claude", "steps on claude fail; pick another default agent"),
+        gh: await kept("gh", "GitHub projects fail until the GitHub CLI is installed"),
     };
     const { refused } = parseAgentEnv(process.env.OLIMP_AGENT_ENV);
     if (refused.length)
         console.warn(
             `OLIMP_AGENT_ENV: not passed to agents (not a name or OLIMP's own): ${refused}`,
         );
-    console.log(
-        `agent environment: allowed list${cfg.agentEnv.length ? ` and ${cfg.agentEnv}` : ""}`,
-    );
     const taken = `port ${cfg.port} is taken, by another OLIMP perhaps (OLIMP_PORT picks another)`;
     if (!(await portFree(cfg.port))) {
         console.error(`OLIMP does not start: ${taken}`);
@@ -100,18 +107,20 @@ export async function start(folder: string | null = null): Promise<void> {
     });
     const bus = new EventBus();
     const store = publishing(opened, bus);
-    console.log(`database: ${store.description}`);
+    info("Database", store.description);
     const accounts = await store.hasUsers();
     const problem = publicHostProblem(cfg.publicHost, accounts);
     if (problem) {
         console.error(`OLIMP does not start: ${problem}`);
         process.exit(1);
     }
-    console.log(
+    info(
+        "Accounts",
         accounts
-            ? `accounts: every request needs a token${cfg.publicHost ? `; public host ${cfg.publicHost}` : ""}`
-            : "accounts: none, the API trusts loopback",
+            ? `every request needs a token${cfg.publicHost ? `; public host ${cfg.publicHost}` : ""}`
+            : "none, the API trusts loopback",
     );
+    info("Agent env", `allowed list${cfg.agentEnv.length ? ` and ${cfg.agentEnv}` : ""}`);
     await loadSettings(store, cfg);
     await loadMail(store, cfg);
     const interrupted = await store.failInterrupted();
@@ -119,7 +128,8 @@ export async function start(folder: string | null = null): Promise<void> {
         console.warn(
             `${interrupted} task(s) or workflow run(s) interrupted by restart marked failed`,
         );
-    if (folder) await openFolder(store, cfg, folder);
+    const project = folder && (await openFolder(store, cfg, folder));
+    if (project) info("Project", `${project}  ${folder}`);
     await ensureSandbox(store, cfg).catch((error) => console.error(`sandbox: ${error}`));
     for (const repo of await store.repos())
         await ensureUpkeep(store, repo).catch((error) =>
@@ -140,8 +150,23 @@ export async function start(folder: string | null = null): Promise<void> {
             process.exit(1);
         })
         .listen(cfg.port, "127.0.0.1", () => {
+            const url = `http://127.0.0.1:${cfg.port}`;
+            if (!tty) {
+                console.log(`OLIMP on ${url}, the panel and the API (data in ${cfg.home})`);
+                return;
+            }
+            const agents = AGENTS.map((name) => ({ name, found: !missing.has(name) }));
+            const panel = cfg.devPanel ?? url;
+            const rows: [string, string][] = [
+                ...(cfg.devPanel ? [["API", url] as [string, string]] : []),
+                ["API docs", `${panel}/docs/api`],
+                ["Data", cfg.home],
+                ...facts,
+            ];
+            const { columns = 80 } = process.stdout;
+            const depth = process.stdout.getColorDepth();
             console.log(
-                `OLIMP on http://127.0.0.1:${cfg.port}, the panel and the API (data in ${cfg.home})`,
+                banner({ version: currentVersion(), url: panel, rows, agents }, columns, depth),
             );
         });
     startWorker(store, cfg);

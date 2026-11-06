@@ -1,3 +1,5 @@
 # esbuild (under vite) ships its binary as an optional dependency; its install script is not needed.
+# vue-demi (under Scalar's API reference) only switches between Vue 2 and 3; its default is Vue 3.
 allowBuilds:
   esbuild: false
+  vue-demi: false

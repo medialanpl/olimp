@@ -105,6 +105,7 @@ export const keys = {
     agentDefaults: ["agent-defaults"] as const,
     models: ["models"] as const,
     version: ["version"] as const,
+    openApi: ["openapi"] as const,
     settings: ["settings"] as const,
     mail: ["mail"] as const,
     skillSources: ["skill-sources"] as const,
@@ -711,6 +712,13 @@ export function useSaveAgentDefaults() {
         onSuccess: (saved) => client.setQueryData(keys.agentDefaults, saved),
     });
 }
+
+export const useOpenApi = () =>
+    useQuery({
+        queryKey: keys.openApi,
+        queryFn: () => api<Record<string, unknown>>("/api/openapi.json"),
+        staleTime: Number.POSITIVE_INFINITY,
+    });
 
 export const useVersion = () =>
     useQuery({

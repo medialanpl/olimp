@@ -695,6 +695,11 @@ function AccountMenu({ close }: { close: () => void }) {
                             {t("header.machineSettings")}
                         </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="text-muted-foreground">
+                        <Link to="/docs/api" onClick={close}>
+                            {t("nav.apiDocs")}
+                        </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onSelect={() => setVersionOpen(true)}>
                         <span className="flex-1">

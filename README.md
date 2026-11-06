@@ -200,7 +200,7 @@ the setup and the checks, [AGENTS.md](AGENTS.md) the house rules, for people and
 ```sh
 git clone https://github.com/medialanpl/olimp && cd olimp
 pnpm install
-pnpm dev      # API on 4851 restarting on changes, panel on http://localhost:5175, data in ~/.olimp-dev
+pnpm dev      # API on 4851 restarting on changes, panel on http://127.0.0.1:5175, data in ~/.olimp-dev
 ```
 
 ## License

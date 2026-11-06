@@ -36,6 +36,7 @@ use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it 
   password, second factor and sessions under `/api/me/` are REST only, since MCP signs in with a
   token; so are the terminals under `/api/{tasks,workflow-runs}/:id/terminals` and the
   Preview's `/api/preview`, a person's shell and browser in the panel (a step's agent has its own).
+  `/api/openapi.json` is REST only too: `src/openapi.ts` makes it from the MCP tools' own requests.
 - The API trusts anything that reaches it until accounts exist: keep it bound to loopback and keep
   the host, origin and content-type checks in `src/api.ts` (tests in `test/api.test.ts`). With
   accounts every request but `/health` and the sign-in needs a token or the panel's session (a

@@ -10,6 +10,8 @@ const USAGE = `olimp            start OLIMP: API and panel on http://127.0.0.1:4
 olimp deploy     update the running OLIMP (a checkout to origin's main, an npm install to npm's
                  latest version) once no job is working, and restart it
 olimp mcp        OLIMP's MCP server on stdio for your own agent (OLIMP_URL, OLIMP_TOKEN)
+olimp docs [words]
+                 the REST API in the terminal: every operation, or those that match in full
 olimp agent-login <agent> [login]
                  log an agent CLI in as the account of OLIMP_TOKEN
 ${SERVICE_USAGE}`;
@@ -37,6 +39,9 @@ if (!command || command === "start") {
     const { createMcpServer } = await import("./mcp.ts");
     const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
     await createMcpServer().connect(new StdioServerTransport());
+} else if (command === "docs") {
+    const { docs } = await import("./docs.ts");
+    process.stdout.write(await docs(process.argv.slice(3).join(" ")));
 } else if (command === "agent-login") {
     const { agentLogin } = await import("./agent-login.ts");
     await agentLogin(argument, more);

@@ -11,7 +11,7 @@ const env: NodeJS.ProcessEnv = {
     ...process.env,
     OLIMP_HOME: home,
     OLIMP_PORT: "4851",
-    OLIMP_DEV_PANEL: "http://localhost:5175",
+    OLIMP_DEV_PANEL: "http://127.0.0.1:5175",
 };
 delete env.OLIMP_DATABASE_URL;
 
@@ -47,7 +47,8 @@ const children = [
         env,
         stdio: "inherit",
     }),
-    spawn("pnpm", ["dev:web", "--port", "5175", "--strictPort"], { env, stdio: "inherit" }),
+    // Vite's own banner stays quiet: OLIMP's names the panel and the API.
+    spawn("pnpm", ["dev:web", "--logLevel", "warn"], { env, stdio: "inherit" }),
 ];
 // Ctrl+C reaches both; when one ends on its own, the other goes too.
 for (const child of children)

@@ -407,6 +407,8 @@ test("the machine, the agents and the version are reported", async () => {
     );
     const version = (await call("GET", "/api/version")).json;
     assert.match(version.version as string, /^\d+\.\d+\.\d+/);
+    const spec = (await call("GET", "/api/openapi.json")).json;
+    assert.equal((spec.info as { version: string }).version, version.version);
 });
 
 test("tasks run with claude unless codex is chosen", async () => {

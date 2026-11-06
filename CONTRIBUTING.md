@@ -18,7 +18,7 @@ You also need `git`, `gh` logged in (`gh auth login`) and `claude` logged in wit
 pnpm build            # web panel into web/dist (served by pnpm start)
 pnpm start            # panel and REST API on http://127.0.0.1:4850, data in ~/.olimp
 pnpm mcp              # MCP server on stdio, talks to the running API
-pnpm dev:web          # panel with hot reload on http://localhost:5173, API proxied to 4850
+pnpm dev:web          # panel with hot reload on http://127.0.0.1:5175, API proxied to 4851
 ```
 
 `pnpm start` and `pnpm mcp` read `.env` when it exists (copy [`.env.example`](.env.example));

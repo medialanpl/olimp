@@ -113,12 +113,20 @@
   `undefined` for a path not its own; the input checks several of them share are in
   `src/api/shared.ts`. `src/main.ts` refuses `OLIMP_PUBLIC_HOST` without accounts, wraps the store
   with the bus and starts the API, the worker, the scheduler, the issue poller and the event purge.
+  In a terminal it ends with `src/banner.ts`: the mark in half blocks beside the address, the
+  database, accounts and agents; in a log (stdout not a TTY) the same facts are plain lines.
 - `src/mcp.ts`: MCP server on stdio, a thin client of the API; it sends `Accept-Language` from
   `OLIMP_LOCALE` and `Authorization: Bearer` from `OLIMP_TOKEN`. With `OLIMP_STEP_TOKEN` it is an
   agent step's `olimp-memory` server: only the memory and note tools, the token in `x-olimp-step`. The tools live in `src/mcp/`, one
   module per domain (projects, project settings, GitHub, integrations, tasks, workflows,
   automations, skills, memory, users, agents, system), each a `register…Tools` function given
   the server and the API client; the schemas several of them share are in `src/mcp/shared.ts`.
+- `src/openapi.ts`: the OpenAPI 3.1 description at `/api/openapi.json`. It registers the MCP tools
+  on a recording server and runs each handler with a marker for every argument, so each operation's
+  path, query and body are what the tool sends and its schemas are the tool's zod schemas; two tools
+  on one method and path are one operation with alternative bodies. The panel shows it with Scalar
+  at `/docs/api`, loaded only with that page and in the panel's colours; `src/docs.ts` prints it in
+  the terminal for `olimp docs`.
 - `src/i18n.ts` and `messages/{en,pl}.json`: text shown to users. The catalogs use the next-intl
   format (nested keys, `{name}` placeholders), so the panel reads the same files through `use-intl`
   (its texts under `web`); `t(locale, key, params)` is typed against `en.json`, and the locale

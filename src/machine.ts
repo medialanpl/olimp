@@ -148,7 +148,7 @@ export const install = (): Promise<Install> => {
     return installed;
 };
 
-const currentVersion = () =>
+export const currentVersion = () =>
     (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }).version;
 
 let lastCheck: UpdateCheck | null = null;

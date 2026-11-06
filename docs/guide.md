@@ -31,7 +31,7 @@ From a clone:
 ```sh
 pnpm install            # once, and after every pull
 pnpm prod               # production: build the panel, then panel and API on http://127.0.0.1:4850, data in ~/.olimp
-pnpm dev                # development: panel on http://localhost:5175 with hot reload, API on 4851, data in ~/.olimp-dev
+pnpm dev                # development: panel on http://127.0.0.1:5175 with hot reload, API on 4851, data in ~/.olimp-dev
 pnpm dev --from-prod    # the same on a fresh copy of the production data
 pnpm check              # types, lint, tests and the panel build, as CI
 ```
@@ -77,7 +77,7 @@ it needs an admin's `OLIMP_TOKEN`); it exits and lets the service start the new 
 Work in a clone of your own on any branch; the service's clone only ever moves with `olimp deploy`:
 
 ```sh
-pnpm dev               # API on 4851 restarting on every change, data in ~/.olimp-dev; panel on http://localhost:5175
+pnpm dev               # API on 4851 restarting on every change, data in ~/.olimp-dev; panel on http://127.0.0.1:5175
 pnpm dev --from-prod   # the same, starting from a copy of the service's SQLite data in ~/.olimp
 ```
 
@@ -120,8 +120,9 @@ page's reach, and "Sign out" ends it. Without `web/dist` the API works as before
 
 `pnpm dev` runs the panel with Vite's dev server, which reloads on every change and proxies `/api`
 and `/health` to the dev API on 4851; the API itself sends the panel's pages on to it
-(`OLIMP_DEV_PANEL`), so 4851 never shows an old build. `pnpm dev:web` alone does the same on
-`http://localhost:5173`; `OLIMP_URL` or `OLIMP_PORT` point it elsewhere, e.g. at the service.
+(`OLIMP_DEV_PANEL`), so 4851 never shows an old build. OLIMP's banner names both addresses and
+Vite's own stays quiet. `pnpm dev:web` alone runs the same panel on 5175 with Vite's banner;
+`OLIMP_URL` or `OLIMP_PORT` point it elsewhere, e.g. at the service.
 
 ### Database
 
@@ -137,6 +138,15 @@ OLIMP creates a missing database (`utf8mb4`) when its user may, and applies its 
 start. The password stays in the variable or in `.env` (ignored by git); the start-up log, errors
 and the API never show it, and agents do not inherit the variable. Data does not move between
 the two databases.
+
+### REST API
+
+The panel's *API reference* (`/docs/api`, also in the account menu and the command palette) is the
+interactive reference: every operation with its parameters and body, and *Try it* sends a request
+as you. Its OpenAPI 3.1 description is `GET /api/openapi.json`, made from the MCP tools' own
+requests (`src/openapi.ts`), so it never differs from what they do; the table below is the same API
+in short. In the terminal `olimp docs` lists every operation and `olimp docs <words>` shows the ones
+that match in full, with their parameters and body (`pnpm olimp docs` in a clone).
 
 ```sh
 curl -s -X POST localhost:4850/api/repos -H 'content-type: application/json' -d '{"repo":"owner/name"}'

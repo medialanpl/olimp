@@ -14,6 +14,7 @@ import {
 } from "../limits.ts";
 import { checkUpdate, machine, update, version } from "../machine.ts";
 import { mailView, resetMail, saveMail } from "../mail.ts";
+import { openApi } from "../openapi.ts";
 import { globalInstructions, saveSettings, settingsView } from "../settings.ts";
 import type { Store, User } from "../store.ts";
 import { totalUsage } from "../workflow-runner.ts";
@@ -33,6 +34,7 @@ export async function systemRoute(
     const locale = localeFrom(req.headers["accept-language"]);
     if (path === "/api/machine" && method === "GET") return [200, await machine()];
     if (path === "/api/version" && method === "GET") return [200, await version()];
+    if (path === "/api/openapi.json" && method === "GET") return [200, await openApi()];
     if (path === "/api/version/check" && method === "POST") {
         requireAdmin(actor);
         return [200, await checkUpdate()];

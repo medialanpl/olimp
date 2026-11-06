@@ -6,6 +6,7 @@ import { OlimpLoader } from "@/components/logo";
 import { ErrorState } from "@/components/page";
 import { CompareSkeleton, JobPageSkeleton } from "@/components/skeletons";
 import { useAuth } from "@/lib/auth";
+import { ApiDocsPage } from "@/pages/api-docs";
 import { AutomationPage } from "@/pages/automation";
 import { AutomationsPage } from "@/pages/automations";
 import { CostsPage } from "@/pages/costs";
@@ -100,6 +101,7 @@ export function App() {
                     <Route path="project/:id/settings/:section" element={<RepoSettingsPage />} />
                     <Route path="settings/general/:section" element={<SettingsPage />} />
                     <Route path="costs" element={<CostsPage />} />
+                    <Route path="docs/api" element={<ApiDocsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Route>
             </Routes>

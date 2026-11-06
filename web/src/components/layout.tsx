@@ -24,13 +24,14 @@ function useLiveNotifications() {
 }
 
 export function AppLayout() {
-    // The task page, the new task's chat, the workflow editor, the memory and the skills fill the
-    // window.
+    // The task page, the new task's chat, the workflow editor, the memory, the skills and the API
+    // reference fill the window.
     const task = useMatch("/tasks/:id");
     const editor = useMatch("/workflows/:id");
     const memory = useMatch("/project/:id/memory/*");
     const skills = useMatch("/project/:id/skills");
-    const bleed = Boolean(task || editor || memory || skills);
+    const apiDocs = useMatch("/docs/api");
+    const bleed = Boolean(task || editor || memory || skills || apiDocs);
     useLiveNotifications();
     return (
         <SidebarProvider className="h-svh">

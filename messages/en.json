@@ -347,6 +347,7 @@
             "workflows": "Workflows",
             "projects": "Projects",
             "costs": "Costs",
+            "apiDocs": "API reference",
             "newTask": "New task",
             "menu": "Menu",
             "toggleSidebar": "Toggle sidebar",

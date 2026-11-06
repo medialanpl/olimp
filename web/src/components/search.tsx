@@ -1,5 +1,6 @@
 import { defaultFilter } from "cmdk";
 import {
+    BracesIcon,
     CoinsIcon,
     FolderGit2Icon,
     FolderIcon,
@@ -37,6 +38,7 @@ const VIEWS = [
     { to: "/tasks", key: "allTasks", Icon: LayersIcon },
     { to: "/workflows", key: "workflows", Icon: WorkflowIcon },
     { to: "/costs", key: "costs", Icon: CoinsIcon },
+    { to: "/docs/api", key: "apiDocs", Icon: BracesIcon },
 ] as const;
 
 type Entry = {
@@ -60,7 +62,7 @@ export function SearchMenu({ close }: { close: () => void }) {
     const keyMap = useKeyMap();
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            if (!triggered(e, "search")) return;
+            if (!triggered(e, "search") || e.defaultPrevented) return;
             e.preventDefault();
             setOpen((value) => !value);
         };
