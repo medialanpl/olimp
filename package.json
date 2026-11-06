@@ -42,7 +42,8 @@
         "test": "node --test",
         "test:mysql": "node --env-file-if-exists=.env --test --test-concurrency=1",
         "upgrade:package": "pnpm update --interactive --latest",
-        "package": "node scripts/package.ts"
+        "package": "node scripts/package.ts",
+        "release": "sh -c 'pnpm version \"${1:-patch}\" -m \"chore: wydanie %s\" && git push --follow-tags' release"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.32.2",

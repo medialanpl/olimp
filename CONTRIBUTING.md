@@ -88,15 +88,20 @@ cd some-repo && HOME=/tmp/try OLIMP_HOME=/tmp/try/olimp OLIMP_PORT=4880 \
 ```
 
 A release is a tag on `main` matching `version` in `package.json`, which the panel's version window
-compares with npm's latest. The tag runs `.github/workflows/publish.yml`: the tests, the package and
-`npm stage publish` through npm's trusted publisher, without a token. The version reaches npm once
-the maintainer approves it with 2FA:
+compares with npm's latest. `pnpm release` bumps the version, commits it and pushes the commit with
+its tag (it refuses uncommitted changes). The tag runs `.github/workflows/publish.yml`: the tests,
+the package and `npm stage publish` through npm's trusted publisher, without a token. The version
+reaches npm once the maintainer approves it with 2FA, under Staged packages on npmjs.com or here:
 
 ```sh
-git tag v0.0.7 && git push origin v0.0.7
-npm stage list olimp-run          # once the workflow is done
-npm stage approve <stage id>
+pnpm release                  # 0.1.0 → 0.1.1: fixes
+pnpm release minor            # 0.1.1 → 0.2.0: features or breaking changes, while 0.x
+npm stage list olimp-run      # about 5 minutes later; E401 means `npm login` first
+npm stage approve <stage id>  # or reject
 ```
+
+A staged version is the package built from its tag: commits pushed later need a new version, and a
+published version can never be replaced.
 
 ## How work is done
 
