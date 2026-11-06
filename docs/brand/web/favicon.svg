@@ -1,8 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <title>OLIMP</title>
-  <style>
-    path { fill: #1C1F26; }
-    @media (prefers-color-scheme: dark) { path { fill: #F4F1EA; } }
-  </style>
-  <path fill-rule="evenodd" d="M24 128A104 104 0 1 0 232 128A104 104 0 1 0 24 128Z M66.45 145.55L128 84L189.55 145.55A64 64 0 1 0 66.45 145.55Z"/>
+  <rect width="256" height="256" rx="48" fill="#1C1F26"/>
+  <path fill="#F4F1EA" fill-rule="evenodd" transform="translate(128 128) scale(0.875) translate(-128 -128)" d="M24 128A104 104 0 1 0 232 128A104 104 0 1 0 24 128Z M66.45 145.55L128 84L189.55 145.55A64 64 0 1 0 66.45 145.55Z"/>
 </svg>

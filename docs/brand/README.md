@@ -19,7 +19,7 @@ All files are plain SVG paths: no `<text>`, no `<use>`, no rasters or filters.
 | `olimp-stacked.svg` | stacked lockup |
 | `olimp-app-icon.svg` | app icon on a Graphite tile |
 | `olimp-loader.svg` | loading indicator (CSS inside the file) |
-| `web/favicon.svg` | favicon from the small mark, switches to Paper in dark mode |
+| `web/favicon.svg` | favicon: the small mark in Paper on a Graphite tile, the same in both themes |
 | `explorations/peak-v1-arc.svg`, `explorations/peak-v2-flat.svg` | peak variants to compare; v1 is the one in use |
 
 ## Colours

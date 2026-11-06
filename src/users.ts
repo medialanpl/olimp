@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
+    chmodSync,
     existsSync,
     lstatSync,
     mkdirSync,
@@ -7,11 +8,12 @@ import {
     readFileSync,
     readlinkSync,
     rmSync,
+    statSync,
     symlinkSync,
     unlinkSync,
     writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { AGENT_SPECS, type AgentName, DEFAULT_LOGIN, LOGIN_NAME } from "./agents.ts";
 import type { Config } from "./config.ts";
 import { run } from "./proc.ts";
@@ -34,6 +36,28 @@ export const userHome = (cfg: Pick<Config, "home">, id: string) => join(userDir(
 
 export function createUserHome(cfg: Pick<Config, "home">, id: string): void {
     mkdirSync(userHome(cfg, id), { recursive: true, mode: 0o700 });
+}
+
+// Ubuntu's pam_umask (USERGROUPS_ENAB) makes new folders group-writable, and SWC (next build)
+// refuses a cache with such a folder anywhere above it.
+export function tightenHomes(cfg: Pick<Config, "home" | "installationHome">): void {
+    process.umask(process.umask(0o022) | 0o022);
+    const users = join(cfg.home, "users");
+    const ids = existsSync(users) ? readdirSync(users) : [];
+    for (const home of [cfg.installationHome, ...ids.map((id) => userHome(cfg, id))])
+        for (let dir = join(home, ".cache"); dir !== dirname(dir); dir = dirname(dir)) tighten(dir);
+}
+
+// Only folders OLIMP's user owns; a sticky one is shared on purpose, like /tmp.
+function tighten(dir: string): void {
+    try {
+        const { mode, uid } = statSync(dir);
+        if (uid !== process.getuid?.() || !(mode & 0o022) || mode & 0o1000) return;
+        chmodSync(dir, mode & 0o7755);
+        console.warn(`${dir}: no longer writable by group and others, which build tools refuse`);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") console.warn(`${dir}: ${error}`);
+    }
 }
 
 // The agent logins of a deleted account go with it.

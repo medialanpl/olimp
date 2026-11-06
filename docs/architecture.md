@@ -1240,7 +1240,9 @@ cache in a home kept in git) is not one, so an update never pulls someone else's
 Outside a checkout, `install` is `global` when OLIMP's folder is in `npm root -g`, `npx` when it is
 in npx's cache (`_npx`), and `package` otherwise, which offers no update. For a checkout the
 check (`POST /api/version/check`, also at start and every six hours) runs `git fetch origin
-<branch>` and counts the commits behind and ahead. `POST /api/version/update`
+<branch>` and counts the commits behind and ahead. At start and every six hours OLIMP also reads its own repository's
+star count from the GitHub API, which `GET /api/version` returns as `stars` (`null` until it
+answers) for the version window's GitHub button. `POST /api/version/update`
 (admin only) first pauses the worker, then refuses while jobs run, with uncommitted changes, with
 own commits or when nothing is new; otherwise it runs `git pull --ff-only`, `pnpm install
 --frozen-lockfile` and `pnpm build`, answers `202` and exits; under the systemd service

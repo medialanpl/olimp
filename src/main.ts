@@ -23,6 +23,7 @@ import { loadSettings } from "./settings.ts";
 import { Store } from "./store.ts";
 import { closeAllTerminals } from "./terminals.ts";
 import { startEventPurge } from "./trace.ts";
+import { tightenHomes } from "./users.ts";
 import { startWaits } from "./workflow-runner.ts";
 
 // Before the database: a second OLIMP on the same home would mark the first one's jobs interrupted.
@@ -92,6 +93,7 @@ export async function start(folder: string | null = null): Promise<void> {
         console.error(`OLIMP does not start: ${taken}`);
         process.exit(1);
     }
+    tightenHomes(cfg);
     const opened = await Store.open(cfg).catch((error: Error) => {
         console.error(`OLIMP cannot open its database: ${error.message}`);
         process.exit(1);

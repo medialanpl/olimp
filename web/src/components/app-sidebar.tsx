@@ -44,6 +44,7 @@ import { EmptyState } from "@/components/empty-state";
 import { LanguageSelect } from "@/components/language-select";
 import { OlimpLogo } from "@/components/logo";
 import { SearchMenu } from "@/components/search";
+import { STATUS_DOT } from "@/components/status-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -89,20 +90,12 @@ import {
 } from "@/lib/queries";
 import { prNumber, threadsOf } from "@/lib/reads";
 import { triggered } from "@/lib/shortcuts";
-import type { Repo, Task, TaskStatus } from "@/lib/types";
+import type { Repo, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import symbol from "../../../docs/brand/olimp-symbol.svg";
 import symbolReversed from "../../../docs/brand/olimp-symbol-reversed.svg";
 
 const RECENT = 4;
-
-const DOT: Record<TaskStatus, string> = {
-    queued: "bg-muted-foreground/50",
-    running: "bg-warning",
-    done: "bg-constructive",
-    failed: "bg-destructive",
-    cancelled: "bg-muted-foreground/50",
-};
 
 // The level of the menu: null is the main one, {} the settings, with `repo` the project whose own
 // settings are open there.
@@ -190,7 +183,10 @@ function RecentTask({ task, pinned, close }: { task: Task; pinned: boolean; clos
                     >
                         <Link to={`/tasks/${task.id}`} onClick={close}>
                             <span
-                                className={cn("size-1.5 shrink-0 rounded-full", DOT[task.status])}
+                                className={cn(
+                                    "size-1.5 shrink-0 rounded-full",
+                                    STATUS_DOT[task.status],
+                                )}
                             />
                             {pinned && (
                                 <PinIcon className="size-3! shrink-0 fill-current opacity-70" />

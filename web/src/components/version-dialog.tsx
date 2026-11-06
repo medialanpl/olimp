@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DownloadIcon, LoaderCircleIcon, RefreshCwIcon } from "lucide-react";
+import { DownloadIcon, LoaderCircleIcon, RefreshCwIcon, StarIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
+import { GITHUB_MARK } from "@/components/integrations/integration-logo";
+import { OlimpLogo } from "@/components/logo";
 import { FormError } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,7 @@ import { keys, useSettings, useVersion } from "@/lib/queries";
 import type { Version } from "@/lib/types";
 
 const RESTART_WAIT_MS = 120_000;
+const REPO_URL = "https://github.com/medialanpl/olimp";
 
 // The new process answers /health once it listens; then the page loads the new panel.
 async function waitForRestart(): Promise<void> {
@@ -75,7 +78,29 @@ export function VersionDialog({
         <Dialog open={open} onOpenChange={(next) => !update.isPending && onOpenChange(next)}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>OLIMP v{v?.version ?? "…"}</DialogTitle>
+                    <div className="flex flex-wrap items-end justify-between gap-2">
+                        <DialogTitle className="flex items-end gap-2">
+                            <OlimpLogo className="h-10" />
+                            <span className="pb-1 font-mono text-sm text-muted-foreground">
+                                v{v?.version ?? "…"}
+                            </span>
+                        </DialogTitle>
+                        <Button variant="outline" size="sm" asChild>
+                            <a
+                                href={REPO_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={t("version.star")}
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="currentColor" d={GITHUB_MARK} />
+                                </svg>
+                                <StarIcon />
+                                {v?.stars != null && format.count(v.stars)}
+                                <span className="sr-only">{t("version.star")}</span>
+                            </a>
+                        </Button>
+                    </div>
                     <DialogDescription>{t("version.hint")}</DialogDescription>
                 </DialogHeader>
                 <DialogBody className="space-y-4 text-sm">

@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import {
+    chmodSync,
+    existsSync,
+    mkdirSync,
+    mkdtempSync,
+    readFileSync,
+    rmSync,
+    statSync,
+} from "node:fs";
 import { request, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -9,7 +17,7 @@ import { createApi } from "../src/api.ts";
 import { type Config, loadConfig, publicHostProblem } from "../src/config.ts";
 import type { agentsInfo } from "../src/machine.ts";
 import { must, run } from "../src/proc.ts";
-import { agentHome, hashToken, userHome } from "../src/users.ts";
+import { agentHome, hashToken, tightenHomes, userHome } from "../src/users.ts";
 import { bareRepo, chain, fakeGh, ghFiles, openStore, script, step } from "./fixtures.ts";
 
 type AgentInfo = Awaited<ReturnType<typeof agentsInfo>>[number];
@@ -552,4 +560,20 @@ test("each account adds and removes second agent logins of its own", async () =>
     }
     await call("DELETE", "/api/agents/claude/logins/work", { token: member.token, body: {} });
     assert.deepEqual(await logins(member.token), ["default"]);
+});
+
+test("tightenHomes takes group and others' write off the folders above the agents' caches", () => {
+    const home = join(root, "homes", "olimp");
+    const cache = join(userHome({ home }, "61acc25cb7e5"), ".cache");
+    const shared = join(root, "homes", "shared");
+    mkdirSync(cache, { recursive: true });
+    mkdirSync(shared);
+    const writable = [home, join(home, "users"), cache];
+    for (const dir of writable) chmodSync(dir, 0o775);
+    chmodSync(shared, 0o1777);
+    const umask = process.umask(0o002);
+    tightenHomes({ home, installationHome: shared });
+    assert.equal(process.umask(umask), 0o022);
+    for (const dir of writable) assert.equal(statSync(dir).mode & 0o7777, 0o755, dir);
+    assert.equal(statSync(shared).mode & 0o7777, 0o1777);
 });

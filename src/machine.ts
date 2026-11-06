@@ -14,6 +14,7 @@ export const ROOT = join(import.meta.dirname, "..");
 export const PACKAGE = "olimp-run";
 // shortcut: npm's public registry only, make it configurable when someone installs from a mirror.
 const REGISTRY = "https://registry.npmjs.org";
+const GITHUB_REPO = "medialanpl/olimp";
 
 const cpuTimes = () =>
     os.cpus().reduce(
@@ -151,6 +152,7 @@ const currentVersion = () =>
     (JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string }).version;
 
 let lastCheck: UpdateCheck | null = null;
+let stars: number | null = null;
 
 async function checkout() {
     // A package inside a repository (another project's node_modules, the npx cache in a home kept
@@ -178,6 +180,7 @@ export async function version() {
         install: await install(),
         git: await checkout(),
         update: lastCheck,
+        stars,
         root: ROOT,
     };
 }
@@ -225,11 +228,24 @@ export async function checkUpdate(): Promise<UpdateCheck> {
     return lastCheck;
 }
 
+async function checkStars() {
+    const repo = (await fetch(`https://api.github.com/repos/${GITHUB_REPO}`, {
+        signal: AbortSignal.timeout(15_000),
+    })
+        .then((res) => (res.ok ? res.json() : null))
+        .catch(() => null)) as { stargazers_count?: unknown } | null;
+    if (typeof repo?.stargazers_count === "number") stars = repo.stargazers_count;
+}
+
 const CHECK_EVERY_MS = 6 * 60 * 60_000;
 
 export function startUpdateCheck(): () => void {
-    const first = setTimeout(() => void checkUpdate(), 10_000);
-    const timer = setInterval(() => void checkUpdate(), CHECK_EVERY_MS);
+    const check = () => {
+        void checkUpdate();
+        void checkStars();
+    };
+    const first = setTimeout(check, 10_000);
+    const timer = setInterval(check, CHECK_EVERY_MS);
     return () => {
         clearTimeout(first);
         clearInterval(timer);

@@ -12,7 +12,7 @@ import {
 import { Fragment, type ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
-import { StatusBadge } from "@/components/status-badge";
+import { STATUS_DOT } from "@/components/status-badge";
 import {
     Command,
     CommandDialog,
@@ -26,9 +26,11 @@ import {
 } from "@/components/ui/command";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
+import { useFormat } from "@/lib/format";
 import { NEW_TASK, repoPages, SETTINGS, useCurrentRepo } from "@/lib/nav";
 import { useRepos, useTasks } from "@/lib/queries";
 import { keysOf, triggered, useKeyMap } from "@/lib/shortcuts";
+import { cn } from "@/lib/utils";
 
 const VIEWS = [
     { to: "/dashboard", key: "dashboard", Icon: LayoutDashboardIcon },
@@ -43,13 +45,13 @@ type Entry = {
     to: string;
     description?: string;
     icon?: ReactNode;
-    badge?: ReactNode;
     shortcut?: string;
 };
 
 // The command palette: actions, views, settings, repositories and tasks, opened with its shortcut (Ctrl+K by default).
 export function SearchMenu({ close }: { close: () => void }) {
     const t = useTranslations("web");
+    const format = useFormat();
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const current = useCurrentRepo();
@@ -121,9 +123,14 @@ export function SearchMenu({ close }: { close: () => void }) {
             items: (tasks.data ?? []).map((task) => ({
                 id: `task:${task.id}`,
                 label: task.title,
-                description: task.repo,
+                description: `${task.repo} · ${format.relative(task.updatedAt)}`,
                 to: `/tasks/${task.id}`,
-                badge: <StatusBadge status={task.status} />,
+                icon: (
+                    <span className="grid size-4 shrink-0 place-items-center">
+                        <span className={cn("size-2 rounded-full", STATUS_DOT[task.status])} />
+                        <span className="sr-only">{t(`status.${task.status}`)}</span>
+                    </span>
+                ),
             })),
         },
     ].filter((group) => group.items.length > 0);
@@ -182,9 +189,6 @@ export function SearchMenu({ close }: { close: () => void }) {
                                                     </span>
                                                 )}
                                             </span>
-                                            {item.badge && (
-                                                <span className="ml-auto">{item.badge}</span>
-                                            )}
                                             {item.shortcut && (
                                                 <CommandShortcut>{item.shortcut}</CommandShortcut>
                                             )}

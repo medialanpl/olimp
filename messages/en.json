@@ -1926,7 +1926,8 @@
             "npx": "Run by npx",
             "newVersion": "Version {version} on npm",
             "upToDateNpm": "Up to date with npm.",
-            "updateHintNpm": "Update installs the new version from npm (with npx, starts it), then starts OLIMP again in the background (log: {log}). Running jobs must finish first."
+            "updateHintNpm": "Update installs the new version from npm (with npx, starts it), then starts OLIMP again in the background (log: {log}). Running jobs must finish first.",
+            "star": "Star on GitHub"
         },
         "account": {
             "profile": "Profile",

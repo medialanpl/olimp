@@ -1926,7 +1926,8 @@
             "npx": "Uruchomiony przez npx",
             "newVersion": "Wersja {version} w npm",
             "upToDateNpm": "Aktualny względem npm.",
-            "updateHintNpm": "Aktualizacja instaluje nową wersję z npm (przy npx uruchamia ją), potem uruchamia OLIMP ponownie w tle (log: {log}). Trwające zadania muszą się najpierw skończyć."
+            "updateHintNpm": "Aktualizacja instaluje nową wersję z npm (przy npx uruchamia ją), potem uruchamia OLIMP ponownie w tle (log: {log}). Trwające zadania muszą się najpierw skończyć.",
+            "star": "Daj gwiazdkę na GitHubie"
         },
         "account": {
             "profile": "Profil",
