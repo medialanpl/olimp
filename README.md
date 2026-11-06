@@ -13,7 +13,6 @@
   <a href="#quick-start">Quick start</a>&nbsp;·
   <a href="docs/guide.md">Guide</a>&nbsp;·
   <a href="docs/architecture.md">Architecture</a>&nbsp;·
-  <a href="docs/roadmap.md">Roadmap</a>&nbsp;·
   <a href="https://github.com/medialanpl/olimp/issues">Issues</a>
 </p>
 
@@ -30,8 +29,6 @@ describe a task, and an agent (Claude Code, Codex or one of five others) makes t
 worktree of its own; OLIMP commits it, pushes a branch and opens a pull request. Workflows chain
 agents with tests, reviews and your approval, automations run them on a schedule, and all of it is
 in a web panel, a REST API and an MCP server.
-
-> Work in progress: stage 11 of the [roadmap](docs/roadmap.md).
 
 ## Features
 
@@ -190,7 +187,6 @@ against and what it does not.
   [automations](docs/guide.md#automations), [the MCP server](docs/guide.md#mcp) and
   [configuration](docs/guide.md#configuration), with the REST API along the way.
 - [Architecture](docs/architecture.md): how OLIMP is built, with the threat model.
-- [Roadmap](docs/roadmap.md): the stages so far and the ones to come.
 - [`.env.example`](.env.example): every variable with its default.
 
 ## Contributing

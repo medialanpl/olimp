@@ -1,8 +1,7 @@
 # Guide
 
 How to run, use and configure OLIMP: the panel, projects, workflows, memory, the REST API and the
-MCP server. How it is built: [architecture.md](architecture.md); what comes next:
-[roadmap.md](roadmap.md).
+MCP server. How it is built: [architecture.md](architecture.md).
 
 ## Requirements
 

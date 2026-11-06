@@ -2,7 +2,7 @@
 
 Instructions for AI agents working on OLIMP. What OLIMP is: [README.md](README.md); how to run,
 use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it is built:
-[docs/architecture.md](docs/architecture.md); what comes next: [docs/roadmap.md](docs/roadmap.md).
+[docs/architecture.md](docs/architecture.md).
 
 ## Language
 
@@ -26,11 +26,10 @@ use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it 
 
 ## Rules
 
-- Work on the current roadmap stage only; anything outside it is a note in the PR, not code.
-- Interfaces appear only with their second real implementation: the agent runner has one since
-  stage 1 (`src/agents.ts`: Claude, Codex, Junie, OpenCode, Cursor, pi and Copilot) and the database since stage 6 (`src/db/`, SQLite
-  and MySQL). Code outside `src/db/` uses only the `Store` interface; a schema change is a new
-  numbered migration with SQL for both databases.
+- Interfaces appear only with their second real implementation, as the agent runner
+  (`src/agents.ts`: Claude, Codex, Junie, OpenCode, Cursor, pi and Copilot) and the database
+  (`src/db/`, SQLite and MySQL) have. Code outside `src/db/` uses only the `Store` interface; a
+  schema change is a new numbered migration with SQL for both databases.
 - Every capability exposed in the REST API is also an MCP tool in `src/mcp/`, and the other way
   round. The MCP server talks to the API; only the API process opens the database. The exception
   (the maintainer's decision): the panel's sign-in under `/api/auth/` and the caller's own
@@ -68,7 +67,7 @@ use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it 
   description: `typ(zakres): opis`, e.g. `feat(integrations): integracje MCP przypisane do repo`.
   Types: `feat`, `fix`, `docs`, `refactor`, `test`, `ci`, `chore`, `perf`. The scope is a module
   (`api`, `mcp`, `runner`, `store`, `skills`, `workflows`, `notes`, `integrations`, `issues`,
-  `scheduler`, `users`, `web` for the panel) or an area (`roadmap`, `deps`) and may be left out; `!` before the colon marks a
+  `scheduler`, `users`, `web` for the panel) or an area (`deps`) and may be left out; `!` before the colon marks a
   breaking change. CI checks the title (`.github/workflows/pr-title.yml`).
 - Branches are `typ/krotki-opis`, e.g. `chore/konwencja-git`. OLIMP's own tasks keep their
   prefix, `olimp/<task id>`. Commits on a branch are free-form: only the PR title reaches `main`.

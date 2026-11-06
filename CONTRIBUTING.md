@@ -100,8 +100,6 @@ npm stage approve <stage id>
 
 ## How work is done
 
-- Work follows [docs/roadmap.md](docs/roadmap.md) stage by stage. Change only what the current
-  stage needs; anything beyond it is a note in the pull request, not code.
 - Code, identifiers, comments and docs are in English.
 - Branches, pull request titles and the squash commit on `main` follow the Git section of
   [AGENTS.md](AGENTS.md): a branch `typ/krotki-opis` and a title `typ(zakres): opis`.

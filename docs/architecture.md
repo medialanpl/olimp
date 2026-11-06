@@ -1,4 +1,4 @@
-# Architecture (stage 11)
+# Architecture
 
 ## Modules
 
@@ -1273,7 +1273,7 @@ running jobs interrupted.
 
 ## Threat model
 
-| Asset or risk | Stage 9b answer | Later |
+| Asset or risk | Today | Later |
 |---|---|---|
 | The installation's GitHub, Claude and Codex logins | Never stored by OLIMP: it calls the installation's `gh`, `claude` and `codex`. An agent gets only its own agent's login variables, and none at all in a step of an account; `GH_TOKEN`, `GITHUB_TOKEN` and the other agent's keys stay in the OLIMP process, which runs git and gh itself | |
 | An account's Claude and Codex logins | Kept by the CLIs themselves in `OLIMP_HOME/users/<id>/home` (mode 700), never in the database or logs; created by `pnpm agent-login` on the OLIMP machine and deleted with the account. Only that account's steps run with that `HOME`; a step without the login fails instead of using the installation's. The files are readable by the OS user running OLIMP, which therefore runs everyone's agents: whoever administers the machine can use every login in it | logins outside the OLIMP user's reach (containers or OS users per account) |
