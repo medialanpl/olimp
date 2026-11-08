@@ -878,7 +878,7 @@
             },
             "resume": {
                 "title": "Zatrzymany na kroku {node}",
-                "hint": "Usuń przyczynę błędu tego kroku i wznów: run pójdzie dalej od tego kroku z tym, co zrobiły kroki przed nim. Ponów zaczyna cały run od nowa.",
+                "hint": "Usuń przyczynę błędu w worktree przebiegu, np. w terminalu, i wznów: run pójdzie dalej od tego kroku z tym, co zrobiły kroki przed nim. Poprawka na gałęzi bazowej tu nie trafi, a worktree odtworzony z gałęzi przebiegu nie ma plików spoza gita. Ponów zaczyna cały run od nowa.",
                 "action": "Wznów od tego kroku"
             },
             "flow": "Przebieg",

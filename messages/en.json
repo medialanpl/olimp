@@ -878,7 +878,7 @@
             },
             "resume": {
                 "title": "Stopped at {node}",
-                "hint": "Fix what made this step fail, then resume: the run goes on from this step with what the steps before it did. Retry starts the whole run over.",
+                "hint": "Fix what made this step fail in the run's worktree, in the terminal say, then resume: the run goes on from this step with what the steps before it did. A fix on the base branch does not reach it, and a worktree made again from the run's branch has no files outside git. Retry starts the whole run over.",
                 "action": "Resume from this step"
             },
             "flow": "Flow",

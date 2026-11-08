@@ -884,8 +884,9 @@ A run (`runWorkflow` in `src/workflow-runner.ts`):
    A failed run whose last step failed resumes in place (`resumeFailedRun`): `resumeRun` from
    `failed` with `state.resumeAt`, and the worker visits that node again first with the state as it
    was; the worktree is the kept one, or `git worktree add` of the run's local branch (its commits
-   and the end-of-run autosave, pushed or not) with the setup scripts. A run that ended at a failed
-   `end` node is not resumable: that is its answer, not an error.
+   and the end-of-run autosave, pushed or not) with the setup scripts, so files outside git are
+   lost and nothing comes from the base branch: a fix goes into the worktree. A run that ended at
+   a failed `end` node is not resumable: that is its answer, not an error.
 6. A fork queues one task per branch with `parent_run` (migration 18), all from the run's branch
    in the clone; a reviewer branch is told to change nothing and commits nothing, the others push
    their branch without a pull request; nothing merges back. A `join` with `any` cancels the other
