@@ -342,11 +342,14 @@ export async function openOlimpDir(tree: string): Promise<void> {
     }
 }
 
-// The worktree of a run that waited is still on disk; the worker opens it again.
+// The worktree of a run that waited is still on disk; the worker opens it again. A resumed failed
+// run's may be gone (the project keeps none, or reclaimed it): it comes back from the run's local
+// branch, which holds the commits and the end-of-run autosave even when nothing was pushed.
 export async function reopenWorktree(
     store: Store,
     cfg: Config,
     wr: WorkflowRun,
+    restore = false,
 ): Promise<Worktree> {
     const repo = await store.repo(wr.repo);
     if (!repo) throw new Error(`repository ${wr.repo} is not registered`);
@@ -355,6 +358,12 @@ export async function reopenWorktree(
     if (!isGitFolder(clone))
         return { repo, clone, tree: clone, branch, inPlace: true, commits: false };
     const tree = join(worktreesDir(cfg), wr.id);
-    if (!existsSync(tree)) throw new Error("the run's worktree is gone, so the run cannot go on");
-    return { repo, clone, tree, branch, inPlace: false, commits: true };
+    const w = { repo, clone, tree, branch, inPlace: false, commits: true };
+    if (existsSync(tree)) return { ...w, reused: true };
+    if (!restore) throw new Error("the run's worktree is gone, so the run cannot go on");
+    await inClone(clone, async () => {
+        await run("git", ["-C", clone, "worktree", "prune"]);
+        await must("git", ["-C", clone, "worktree", "add", tree, branch]);
+    });
+    return w;
 }

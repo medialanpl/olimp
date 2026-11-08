@@ -1,16 +1,20 @@
-import { AlertCircleIcon } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AlertCircleIcon, StepForwardIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { AgentAvatar, agentLabel } from "@/components/agent-mark";
 import { useNodeTitle, usePortLabel } from "@/components/flow/graph";
 import { Markdown } from "@/components/markdown";
+import { FormError } from "@/components/page";
 import { ChildLink, StepState } from "@/components/run/steps";
 import { WaitCard } from "@/components/run/wait-card";
 import { Activity, UserTurn } from "@/components/task-chat";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { api } from "@/lib/api";
 import { labelOf, nodeById } from "@/lib/flow";
 import { elapsed, useFormat } from "@/lib/format";
-import { useTrace } from "@/lib/queries";
+import { keys, useTrace } from "@/lib/queries";
 import type { AgentEvent, AgentName, Step, WorkflowRun } from "@/lib/types";
 
 function StepFacts({ step }: { step: Step }) {
@@ -135,6 +139,36 @@ function NodeStep({ run, step }: { run: WorkflowRun; step: Step }) {
     );
 }
 
+// A run whose last step failed goes on from that step, as the API allows.
+export function ResumeCard({ run }: { run: WorkflowRun }) {
+    const t = useTranslations("web");
+    const client = useQueryClient();
+    const resume = useMutation({
+        mutationFn: () =>
+            api<WorkflowRun>(`/api/workflow-runs/${run.id}/resume`, { method: "POST" }),
+        onSuccess: (updated) => client.setQueryData(keys.run(run.id), updated),
+    });
+    const last = run.steps.at(-1);
+    if (run.status !== "failed" || last?.status !== "failed") return null;
+    const node = nodeById(run.definition, last.node);
+    return (
+        <Alert variant="warning">
+            <StepForwardIcon />
+            <AlertTitle>
+                {t("runs.resume.title", { node: node ? labelOf(node) : last.node })}
+            </AlertTitle>
+            <AlertDescription className="space-y-3">
+                <p>{t("runs.resume.hint")}</p>
+                <Button size="sm" onClick={() => resume.mutate()} disabled={resume.isPending}>
+                    {resume.isPending ? <Spinner /> : <StepForwardIcon />}
+                    {t("runs.resume.action")}
+                </Button>
+                <FormError error={resume.error} />
+            </AlertDescription>
+        </Alert>
+    );
+}
+
 // The run as a conversation: the request, each agent's work and answer, and what waits for you.
 export function RunChat({ run }: { run: WorkflowRun }) {
     const t = useTranslations("web");
@@ -186,6 +220,7 @@ export function RunChat({ run }: { run: WorkflowRun }) {
                         </AlertDescription>
                     </Alert>
                 )}
+                <ResumeCard run={run} />
             </div>
         </div>
     );

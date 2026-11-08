@@ -5,7 +5,7 @@ import { BUILD_REQUEST_MAX, NAME_MAX, TASK_BODY_MAX, WORKFLOW_DESCRIPTION_MAX } 
 import { listSkills } from "../skills.ts";
 import type { Store, User, WorkflowInput } from "../store.ts";
 import { buildWorkflow } from "../workflow-builder.ts";
-import { answerRun, cancelWaitingRun } from "../workflow-runner.ts";
+import { answerRun, cancelWaitingRun, resumeFailedRun } from "../workflow-runner.ts";
 import { type Definition, parseDefinition } from "../workflows.ts";
 import {
     type Answer,
@@ -129,7 +129,7 @@ export async function workflowsRoute(
     }
     if (path === "/api/workflow-runs" && method === "GET") return [200, await store.runs()];
     const runId =
-        /^\/api\/workflow-runs\/([0-9a-f]{12})(?:\/(trace|changes|cancel|retry|read|answer))?$/.exec(
+        /^\/api\/workflow-runs\/([0-9a-f]{12})(?:\/(trace|changes|cancel|retry|resume|read|answer))?$/.exec(
             path,
         );
     if (runId) {
@@ -175,6 +175,11 @@ export async function workflowsRoute(
                 throw new HttpError(409, "run.notFinished", { run: id, status: found.status });
             const copy = { ...found, id: found.workflow };
             return [201, await store.createRun(copy, null, author, id, found.input)];
+        }
+        if (action === "resume" && method === "POST") {
+            if (!(await resumeFailedRun(store, found)))
+                throw new HttpError(409, "run.notResumable", { run: id, status: found.status });
+            return [200, await store.run(id)];
         }
     }
     return undefined;

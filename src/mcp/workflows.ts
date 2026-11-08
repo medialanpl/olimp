@@ -213,4 +213,16 @@ export function registerWorkflowTools(server: McpServer, call: Call): void {
         },
         ({ id }) => call("POST", `/api/workflow-runs/${id}/retry`),
     );
+    server.registerTool(
+        "olimp_resume_workflow_run",
+        {
+            description:
+                "Queue a failed workflow run again in place, to go on from the step it failed at " +
+                "with the outputs, loop counters and sessions of the steps before it, in its kept " +
+                "worktree or one made again from its branch. Only when its last step failed; " +
+                "olimp_retry_workflow_run starts over instead.",
+            inputSchema: { id },
+        },
+        ({ id }) => call("POST", `/api/workflow-runs/${id}/resume`),
+    );
 }

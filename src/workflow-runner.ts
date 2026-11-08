@@ -575,7 +575,10 @@ export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): P
         checkCancelled(job.signal);
         const resumed = state.wait;
         if (resumed) w = await reopenWorktree(store, cfg, wr);
-        else {
+        else if (state.resumeAt) {
+            w = await reopenWorktree(store, cfg, wr, true);
+            await setUp(w);
+        } else {
             const parent = wr.parentRun ? await store.run(wr.parentRun) : undefined;
             w = await openWorktree(
                 store,
@@ -635,6 +638,11 @@ export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): P
             // A fork leaves from its join, whose port is not one of the fork's.
             if (out.from) step.port = null;
             at = advance(def, out.from ?? node.id, out.port, state.loops);
+        } else if (state.resumeAt) {
+            const node = nodeById(def, state.resumeAt);
+            if (!node) throw new Error(`node ${state.resumeAt} is gone from the run`);
+            state.resumeAt = null;
+            at = { kind: "node", node, transitions: [] };
         } else at = enter(def, state.loops);
         while (at.kind === "node") {
             record(state, at.transitions);
@@ -781,6 +789,14 @@ export async function answerRun(
         ...run.state,
         wait: { ...wait, answer, ...(comment && { comment }), answeredBy: by },
     });
+}
+
+// A failed run goes on from the step it failed at, with its outputs, loop counters and sessions;
+// false when its last step did not fail (an end node that fails is the run's answer, not an error).
+export async function resumeFailedRun(store: Store, run: WorkflowRun): Promise<boolean> {
+    const last = run.steps.at(-1);
+    if (run.status !== "failed" || !run.state || last?.status !== "failed") return false;
+    return store.resumeRun(run.id, { ...run.state, resumeAt: last.node }, "failed");
 }
 
 export async function cancelWaitingRun(

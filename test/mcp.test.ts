@@ -180,6 +180,7 @@ const replies: Record<string, { status: number; body: string }> = {
         status: 201,
         body: '{"retryOf":"cccccccccccc"}',
     },
+    "POST /api/workflow-runs/cccccccccccc/resume": { status: 200, body: '{"status":"queued"}' },
     "GET /api/costs": { status: 200, body: '{"by":"day"}' },
     "GET /api/costs?by=author&days=7": { status: 200, body: '{"by":"author"}' },
 };
@@ -603,6 +604,7 @@ test("every API capability has a tool", async () => {
         "olimp_remove_worktree",
         "olimp_reset_mail",
         "olimp_reset_two_factor",
+        "olimp_resume_workflow_run",
         "olimp_retry_task",
         "olimp_retry_workflow_run",
         "olimp_revoke_token",
@@ -849,6 +851,7 @@ const toolCalls: [string, Record<string, unknown>, string, string, unknown][] = 
         { answer: "approve", comment: "Looks good" },
     ],
     ["olimp_retry_workflow_run", { id: run }, "POST", `/api/workflow-runs/${run}/retry`, {}],
+    ["olimp_resume_workflow_run", { id: run }, "POST", `/api/workflow-runs/${run}/resume`, {}],
     ["olimp_get_costs", {}, "GET", "/api/costs", undefined],
     ["olimp_get_costs", { by: "author", days: 7 }, "GET", "/api/costs?by=author&days=7", undefined],
     ["olimp_list_repos", {}, "GET", "/api/repos", undefined],

@@ -96,6 +96,7 @@
         "notFinished": "Uruchomienie workflow {run} ma jeszcze stan {status}: ponów je, gdy się zakończy.",
         "notCancellable": "Uruchomienia workflow {run} nie można anulować: ma stan {status}.",
         "notAsking": "Uruchomienie workflow {run} nie czeka na odpowiedź.",
+        "notResumable": "Uruchomienia workflow {run} nie da się wznowić: ma stan {status}, a wznawia się tylko uruchomienie, którego ostatni krok się nie udał.",
         "invalidAnswer": "Bramka przyjmuje odpowiedź approve albo reject, nie {answer}."
     },
     "costs": {
@@ -874,6 +875,11 @@
                 "until": "Termin mija {when}.",
                 "childrenAll": "Czeka na {count, plural, one {# podzadanie} few {# podzadania} other {# podzadań}}",
                 "childrenAny": "Czeka na pierwsze udane z {count, plural, one {# podzadania} few {# podzadań} other {# podzadań}}"
+            },
+            "resume": {
+                "title": "Zatrzymany na kroku {node}",
+                "hint": "Usuń przyczynę błędu tego kroku i wznów: run pójdzie dalej od tego kroku z tym, co zrobiły kroki przed nim. Ponów zaczyna cały run od nowa.",
+                "action": "Wznów od tego kroku"
             },
             "flow": "Przebieg",
             "started": "Uruchomiony {when}",

@@ -1087,13 +1087,13 @@ export class SqliteDatabase implements Database {
         this.patchRun(id, patch);
     }
 
-    async resumeRun(id: string, state: RunState): Promise<boolean> {
+    async resumeRun(id: string, state: RunState, from = "waiting"): Promise<boolean> {
         const resumed = this.db
             .prepare(
-                "UPDATE workflow_runs SET status = 'queued', state = ?, updated_at = ? " +
-                    "WHERE id = ? AND status = 'waiting'",
+                "UPDATE workflow_runs SET status = 'queued', state = ?, error = NULL, updated_at = ? " +
+                    "WHERE id = ? AND status = ?",
             )
-            .run(JSON.stringify(state), new Date().toISOString(), id);
+            .run(JSON.stringify(state), new Date().toISOString(), id, from);
         return Number(resumed.changes) > 0;
     }
 

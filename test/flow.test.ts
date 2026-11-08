@@ -31,7 +31,13 @@ import {
 import type { Repo, Store, Task, WorkflowRun } from "../src/store.ts";
 import { addLogin, hashToken, userHome } from "../src/users.ts";
 import { addWebhook, notifyJob } from "../src/webhooks.ts";
-import { answerRun, cancelWaitingRun, checkWait, runWorkflow } from "../src/workflow-runner.ts";
+import {
+    answerRun,
+    cancelWaitingRun,
+    checkWait,
+    resumeFailedRun,
+    runWorkflow,
+} from "../src/workflow-runner.ts";
 import { parseDefinition } from "../src/workflows.ts";
 import { projectWorktrees, removeProjectWorktree } from "../src/worktrees.ts";
 import {
@@ -1072,6 +1078,45 @@ test("a check that fails loops back through a loop node until it passes or the l
     );
     assert.match(failed.error ?? "", /^step tests: `echo nope; exit 2` exited 2/);
     assert.equal(failed.state?.transitions.at(-1)?.to, "gave-up");
+});
+
+test("a failed run resumes at its failed step, in its kept worktree or one made again from its branch", async () => {
+    const flag = join(root, `fixed-${n}`);
+    const graph = {
+        nodes: withStart(
+            step("edit", "Edit"),
+            { id: "tests", type: "check", command: `test -f CHANGED.md && test -f ${flag}` },
+            { id: "done", type: "end", status: "success" },
+        ),
+        edges: edges(["start.next", "edit"], ["edit.done", "tests"], ["tests.pass", "done"]),
+    };
+    for (const keep of [0, 1]) {
+        rmSync(flag, { force: true });
+        const { cfg, store, home, queued } = await setupRun(graph);
+        await store.setRepoSettings("demo", { ...removing(), keepWorktrees: keep });
+        await runWorkflow(store, cfg, queued);
+        const failed = await again(store, queued.id);
+        assert.equal(failed.status, "failed");
+        assert.equal(existsSync(join(home, "worktrees", queued.id)), keep > 0);
+        assert.equal(await resumeFailedRun(store, failed), true);
+        assert.equal(await resumeFailedRun(store, failed), false, "the run is queued already");
+        const queuedAgain = await again(store, queued.id);
+        assert.deepEqual([queuedAgain.status, queuedAgain.error], ["queued", null]);
+        writeFileSync(flag, "");
+        await runWorkflow(store, cfg, queuedAgain);
+        const done = await again(store, queued.id);
+        assert.equal(done.status, "done", done.error ?? "");
+        assert.deepEqual(
+            done.steps.map((s) => [s.node, s.status]),
+            [
+                ["edit", "done"],
+                ["tests", "failed"],
+                ["tests", "done"],
+            ],
+        );
+        assert.equal(done.state?.resumeAt, null);
+        assert.equal(await resumeFailedRun(store, done), false);
+    }
 });
 
 test("an agent with verdicts leaves by the port of the verdict it ends with", async () => {

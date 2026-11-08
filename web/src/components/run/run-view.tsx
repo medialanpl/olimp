@@ -26,7 +26,7 @@ import {
 } from "@/components/job-page";
 import { NotesView } from "@/components/notes-view";
 import { RunGraph } from "@/components/run/graph";
-import { RunChat } from "@/components/run/run-chat";
+import { ResumeCard, RunChat } from "@/components/run/run-chat";
 import { StepList } from "@/components/run/steps";
 import { WaitCard } from "@/components/run/wait-card";
 import { JobPageSkeleton, TerminalSkeleton } from "@/components/skeletons";
@@ -160,6 +160,7 @@ export function RunView({ id }: { id: string }) {
                         </AlertDescription>
                     </Alert>
                 )}
+                <ResumeCard run={run} />
                 {run.input && (
                     <section className="rounded-xl border bg-card p-4">
                         <h2 className="mb-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">

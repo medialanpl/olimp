@@ -519,6 +519,8 @@ test("a retry is a new task with the same template, by the caller, linked to the
         [workflow.id, queued.id, bob?.user.id, "queued"],
     );
     assert.deepEqual(again.json.definition, queued.definition);
+    const resumed = await asBob(`/api/workflow-runs/${again.json.id}/resume`);
+    assert.deepEqual([resumed.status, resumed.json.code], [409, "run.notResumable"]);
 });
 
 // A claude login in the account's HOME, as `pnpm agent-login` leaves it.

@@ -1170,13 +1170,12 @@ export class MysqlDatabase implements Database {
         await this.patchRun(this.pool, id, patch);
     }
 
-    async resumeRun(id: string, state: RunState): Promise<boolean> {
+    async resumeRun(id: string, state: RunState, from = "waiting"): Promise<boolean> {
         const sql =
-            "UPDATE workflow_runs SET status = 'queued', state = ?, updated_at = ? " +
-            "WHERE id = ? AND status = 'waiting'";
-        return (
-            (await exec(this.pool, sql, [JSON.stringify(state), new Date().toISOString(), id])) > 0
-        );
+            "UPDATE workflow_runs SET status = 'queued', state = ?, error = NULL, updated_at = ? " +
+            "WHERE id = ? AND status = ?";
+        const values = [JSON.stringify(state), new Date().toISOString(), id, from];
+        return (await exec(this.pool, sql, values)) > 0;
     }
 
     async cancelWaiting(id: string, error: string): Promise<boolean> {

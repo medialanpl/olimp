@@ -377,6 +377,8 @@ export interface RunState {
     // What checks wrote, left out of the run's commits until something else changes it.
     checkOwned?: Record<string, string>;
     walked: number;
+    // The node a resumed failed run visits again first.
+    resumeAt?: string | null;
 }
 
 // A run keeps a copy of the workflow's name, repository and definition from the moment it was
@@ -636,9 +638,10 @@ export interface Database {
     run(id: string): Promise<WorkflowRun | undefined>;
     runs(limit?: number): Promise<RunSummary[]>;
     updateRun(id: string, patch: RunPatch): Promise<void>;
-    // A waiting run back in the queue with what ended its wait; false when it was not waiting,
-    // so a second answer or a timeout after an answer changes nothing.
-    resumeRun(id: string, state: RunState): Promise<boolean>;
+    // A waiting run back in the queue with what ended its wait, or a failed one to go on from its
+    // failed step; false when it was not in that status, so a second answer or a timeout after an
+    // answer changes nothing.
+    resumeRun(id: string, state: RunState, from?: "waiting" | "failed"): Promise<boolean>;
     // A waiting run cancelled in one step; false when it was not waiting.
     cancelWaiting(id: string, error: string): Promise<boolean>;
     waitingRuns(): Promise<WorkflowRun[]>;

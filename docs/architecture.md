@@ -881,6 +881,11 @@ A run (`runWorkflow` in `src/workflow-runner.ts`):
    told (a restart). A check records the files it wrote that were clean before it
    (`state.checkOwned`, path and blob hash); commits, autosaves and the pull request unstage those
    still unchanged.
+   A failed run whose last step failed resumes in place (`resumeFailedRun`): `resumeRun` from
+   `failed` with `state.resumeAt`, and the worker visits that node again first with the state as it
+   was; the worktree is the kept one, or `git worktree add` of the run's local branch (its commits
+   and the end-of-run autosave, pushed or not) with the setup scripts. A run that ended at a failed
+   `end` node is not resumable: that is its answer, not an error.
 6. A fork queues one task per branch with `parent_run` (migration 18), all from the run's branch
    in the clone; a reviewer branch is told to change nothing and commits nothing, the others push
    their branch without a pull request; nothing merges back. A `join` with `any` cancels the other
@@ -1086,7 +1091,8 @@ the task and run lists it already holds, otherwise it asks `GET /api/tasks/:id` 
 `GET /api/workflow-runs/:id` (`web/src/lib/job-kind.ts`). Both kinds share one shell
 (`web/src/components/job-page.tsx`): the full-height layout, the header with its metadata line and
 usage, the underlined tabs and the actions (Cancel while the job is active; Retry and the rest in
-the "…" menu, never where Cancel was). A run's metadata line links its workflow's editor, project,
+the "…" menu, never where Cancel was; a run whose last step failed also shows a card that resumes
+it from that step, in Conversation and Flow). A run's metadata line links its workflow's editor, project,
 branch, pull request, retry-of and parent run; its tabs are Flow (the card that answers a gate or a
 question, the graph with each node's visits in a side panel, every step in order), Changes, Trace
 and Notes (`web/src/components/run/`), since commits and files exist only for tasks. There are no

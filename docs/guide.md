@@ -230,6 +230,7 @@ curl -s localhost:4850/api/tasks
 | `POST /api/workflows/:id/run` `{input?}` | queue a run now; `input` is the request every agent step reads after its own instructions |
 | `GET /api/workflow-runs`, `GET /api/workflow-runs/:id` | recent runs; one run with its definition, the state of every step (an agent step also with its `agent` and usage) and the usage of all its steps; `run.notFound` if there is none |
 | `GET /api/workflow-runs/:id/trace`, `POST …/cancel`, `POST …/retry` | the events of every agent step with its `node`; cancel (a waiting run also cancels the subtasks it waits for); queue again with the definition it ran with |
+| `POST /api/workflow-runs/:id/resume` | a run whose last step failed is queued again in place and goes on from that step with the outputs, loop counters and sessions of the steps before it, in its kept worktree or one made again from its branch (files outside git are then gone); `run.notResumable` otherwise |
 | `POST /api/workflow-runs/:id/answer` `{answer, comment?}` | answer the gate (`approve` or `reject`) or question the run waits at; it is queued again; `run.notAsking` when it waits for none |
 | `GET /api/workflow-runs/:id/changes` | what the run's branch changes against the default branch, as for a task |
 | `GET /` and any other path outside `/api` | the web panel from `web/dist` (no token needed for its files) |
