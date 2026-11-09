@@ -148,6 +148,24 @@ test("a clone with a fork as remote.pushDefault pushes there and opens the pull 
     assert.equal(file, "change\nchange");
 });
 
+test("a continuation after a failed push sends the thread's commit and opens the pull request", async () => {
+    const { cfg, store } = await setup("[ -f CHANGED.md ] || echo change > CHANGED.md");
+    const clone = repoDir(cfg, (await store.repo("demo")) as Repo);
+    await must("git", ["-C", clone, "config", "remote.origin.pushurl", join(root, "nowhere")]);
+    const first = await store.createTask({ repo: "demo", title: "One", body: "" });
+    await runTask(store, cfg, first);
+    assert.equal((await store.task(first.id))?.status, "failed");
+    await must("git", ["-C", clone, "config", "--unset", "remote.origin.pushurl"]);
+    // No kept worktree and no change of its own: only the clone's copy holds the first commit.
+    const next = await store.createTask({ repo: "demo", title: "Two", body: "", thread: first.id });
+    await runTask(store, cfg, next);
+    const done = await store.task(next.id);
+    assert.equal(done?.status, "done", done?.error ?? "");
+    assert.equal(done?.prUrl, "https://github.com/acme/demo/pull/7");
+    const log = await must("git", ["-C", bare, "log", "--format=%s", `olimp/${first.id}`]);
+    assert.match(log, /^olimp: One$/m);
+});
+
 test("with type labels the agent names the change, and its pull request gets it beside the project's labels", async () => {
     const { cfg, store } = await setup(
         'case "$*" in *"OLIMP:TYPE <type>"*) ;; *) exit 4 ;; esac; echo x > TYPED.md; printf "fixed\\nOLIMP:TYPE fix\\n"',

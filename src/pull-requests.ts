@@ -7,7 +7,8 @@ import { stageAll } from "./workflow-nodes.ts";
 import type { Worktree } from "./worktrees.ts";
 
 // Commits everything, pushes the branch and opens a pull request, unless the branch has one
-// already (`existing`), which the push updates. Without changes nothing is pushed. A local project
+// already (`existing`), which the push updates. Without changes nothing is pushed, but for commits
+// an earlier push left behind. A local project
 // keeps the commit on its branch; a folder without git keeps the change as it is.
 export async function stagedLines(tree: string) {
     await must("git", ["-C", tree, "add", "-A"]);
@@ -41,7 +42,14 @@ export async function openPullRequest(
     if (!w.commits) return null;
     await stageAll(w.tree, checkOwned);
     const changed = (await run("git", ["-C", w.tree, "diff", "--cached", "--quiet"])).code !== 0;
-    if (!changed && !committed) return existing;
+    // Commits no remote has: an earlier job of the thread committed and its push failed.
+    const unsent =
+        !changed &&
+        pr &&
+        Boolean(w.repo.github) &&
+        (await run("git", ["-C", w.tree, "rev-list", "-1", "HEAD", "--not", "--remotes"]))
+            .stdout !== "";
+    if (!changed && !committed && !unsent) return existing;
     if (changed) await must("git", ["-C", w.tree, "commit", "-m", `olimp: ${title}`]);
     if (!w.repo.github) return null;
     const remote = await pushRemote(w.tree);

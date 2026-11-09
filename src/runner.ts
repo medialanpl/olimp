@@ -65,8 +65,11 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
     let status: TaskStatus = "failed";
     try {
         checkCancelled(job.signal);
+        const thread = task.thread ? await store.threadTasks(task.thread) : [];
+        const earlier = thread.filter((t) => t.id !== task.id && t.createdAt <= task.createdAt);
         // A thread works in one folder, named after its first task, because Claude keeps a session
-        // by the folder it ran in.
+        // by the folder it ran in. After a failed job (a push that failed) the clone's copy of the
+        // branch may hold commits GitHub's lacks; only then does it win over GitHub's.
         w =
             task.workspace === "worktree"
                 ? await openWorktree(
@@ -81,7 +84,7 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
                           : parentRun
                             ? (parentRun.branch ?? branchOf(parentRun.id))
                             : null,
-                      parentRun !== null,
+                      parentRun !== null || earlier.at(-1)?.status === "failed",
                   )
                 : await openCheckout(
                       store,
@@ -93,8 +96,6 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
         if (task.thread) parked.add(task.thread);
         if (w.branch !== branch) await store.update(task.id, { branch: w.branch });
         await setUp(w);
-        const thread = task.thread ? await store.threadTasks(task.thread) : [];
-        const earlier = thread.filter((t) => t.id !== task.id && t.createdAt <= task.createdAt);
         const issue = await issueOf(store, task);
         let extra = "";
         if (subtask) extra = subtaskNote(parent);

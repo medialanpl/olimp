@@ -790,7 +790,9 @@ UTC minutes).
    error with the CLI's own line, which tells when the limit resets.
 5. The step's memory token is revoked and `.olimp/` is removed, also when the agent failed.
 6. With changes: commit, push the branch, `gh pr create` (for an issue task the description is
-   `Closes #N`; with an author it ends with `requested by <name>`). Without changes: done, no PR.
+   `Closes #N`; with an author it ends with `requested by <name>`). Without changes: done, no PR,
+   unless the branch holds commits no remote has (an earlier push of the thread failed): those are
+   pushed and get the pull request.
    A project without GitHub stops after the commit: the branch stays in its folder. The branch is
    pushed to the clone's `remote.pushDefault` when it names a remote, else to `origin`; on a fork
    the pull request's head is `owner:branch`, so an account that may only read the repository
@@ -989,7 +991,9 @@ and its author. When it runs:
    (a kept worktree of the thread is removed first, and the folder is parked while the
    continuation works, so nothing reclaims it). If that branch is on GitHub, the worktree starts
    from it (`git worktree add -B`, resetting the clone's stale copy); otherwise from the default
-   branch.
+   branch. After a failed task of the thread it starts from the clone's copy instead when that
+   copy holds commits the pushed one lacks (a push that failed), so they are not reset away; after
+   a task that succeeded GitHub's branch wins, also when it was merged and deleted there.
 2. Each task stores its agent's session (`session_id`, migration 20). When the task before it ran
    on Claude, on the same account, with a session, the continuation resumes it (`--resume`) and
    its prompt leaves the thread out: the session holds it. If Claude finds no such session
@@ -1017,8 +1021,8 @@ definition when the workflow was deleted or moved to another project; it is refu
 (`run.threadBusy`) while the thread's newest run is queued, running or waiting, since a waiting run
 holds the thread's worktree. The continuation works on `olimp/<first run id>` in
 `OLIMP_HOME/worktrees/<first run id>` (`runFolder`, also for resuming and for the terminals, which
-belong to the thread), reused when the branch only moves forward, as for a task. Unlike a task's,
-it starts from the clone's copy of the branch when the pushed one lacks its commits (a workflow
+belong to the thread), reused when the branch only moves forward, as for a task. Unlike a task's
+(only after a failed task of the thread), it starts from the clone's copy of the branch when the pushed one lacks its commits (a workflow
 with no push node, a push that failed), so nothing the thread did is reset away. Every agent step's
 prompt starts with the earlier runs of the thread in the task block's format (the run's name,
 request, status and the answer of its last agent step); nodes do not resume the earlier runs'

@@ -82,7 +82,8 @@ export async function openCheckout(
 
 // `base` is the branch a new one starts from, the default branch unless given (a subtask's is
 // its dispatched task's branch). A workflow run's subtask starts from the run's branch in the
-// clone, `localBase`, which holds commits never pushed; so does a run's continuation.
+// clone, `localBase`, which holds commits never pushed; so does a run's continuation, and a task's
+// after a failed job of its thread.
 async function addWorktree(
     cfg: Config,
     repo: Repo,
@@ -122,8 +123,8 @@ async function addWorktree(
                     repo.github ? `refs/remotes/${pushedTo}${branch}` : own,
                 )
             ).code === 0;
-        // A run's continuation keeps the clone's copy when the pushed one lacks its commits (no
-        // push node, a push that failed): starting from GitHub's would reset them away.
+        // A `localBase` continuation keeps the clone's copy when the pushed one lacks its commits
+        // (no push node, a push that failed): starting from GitHub's would reset them away.
         const unpushed =
             continued &&
             localBase &&
