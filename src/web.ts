@@ -24,7 +24,7 @@ const TYPES: Record<string, string> = {
 const SECURITY = {
     "content-security-policy":
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; font-src 'self'; object-src 'none'; " +
+        "img-src 'self' data: blob: https://avatars.githubusercontent.com; connect-src 'self'; font-src 'self'; object-src 'none'; " +
         "frame-src http://localhost:* http://127.0.0.1:*; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
