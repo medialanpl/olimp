@@ -86,6 +86,13 @@ test("a fresh installation gets a sandbox project once, and a removed one stays 
     assert.deepEqual(await store.repos(), []);
 });
 
+test("pull request review needs a project on GitHub", async () => {
+    const { call } = await setup();
+    const refused = await call("PATCH", "/api/repos/site/settings", { prReview: true });
+    assert.equal(refused.status, 400);
+    assert.equal(refused.json.code, "github.localProject");
+});
+
 test("a project names other projects as its knowledge areas", async () => {
     const { call, store } = await setup();
     await store.addRepo("kb", "main", null, null);

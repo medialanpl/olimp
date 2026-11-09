@@ -14,9 +14,10 @@ import {
     revokeToken,
     subtaskNote,
 } from "./dispatch.ts";
-import { labelPr, parseType, typeRequest } from "./github.ts";
+import { labelPr, parseType, typedTitle, typeRequest } from "./github.ts";
 import { checkCancelled, claim, finalStatus, parked } from "./jobs.ts";
 import { openPullRequest, requestedBy, stagedLines } from "./pull-requests.ts";
+import { type Pull, postReview, pullOf } from "./reviews.ts";
 import type { Store, Task, TaskStatus } from "./store.ts";
 import { notifyJob } from "./webhooks.ts";
 import { runWorkflow, settleParent } from "./workflow-runner.ts";
@@ -67,6 +68,13 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
         checkCancelled(job.signal);
         const thread = task.thread ? await store.threadTasks(task.thread) : [];
         const earlier = thread.filter((t) => t.id !== task.id && t.createdAt <= task.createdAt);
+        // A review reads its pull request as it is now and starts from its head.
+        let pull: Pull | null = null;
+        if (task.reviewPr !== null) {
+            const github = (await store.repo(task.repo))?.github;
+            if (!github) throw new Error(`project ${task.repo} is not on GitHub`);
+            pull = await pullOf(cfg, github, task.reviewPr);
+        }
         // A thread works in one folder, named after its first task, because Claude keeps a session
         // by the folder it ran in. After a failed job (a push that failed) the clone's copy of the
         // branch may hold commits GitHub's lacks; only then does it win over GitHub's.
@@ -83,8 +91,8 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
                           ? parent.branch
                           : parentRun
                             ? (parentRun.branch ?? branchOf(parentRun.id))
-                            : null,
-                      parentRun !== null || earlier.at(-1)?.status === "failed",
+                            : (pull?.headRefName ?? null),
+                      parentRun !== null || (!pull && earlier.at(-1)?.status === "failed"),
                   )
                 : await openCheckout(
                       store,
@@ -108,11 +116,13 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
                 ),
             );
         if (token && task.dispatch) extra = dispatchRequest(task.dispatch);
-        const typed = !!w.repo.github && w.repo.settings.typeLabel && !subtask && !parentRun;
+        const typed =
+            !!w.repo.github && w.repo.settings.typeLabel && !subtask && !parentRun && !pull;
         if (typed) extra += typeRequest();
         const step = {
             ...task,
             issue,
+            review: pull,
             body: `${task.body}${extra}`,
             ...(token ? { servers: dispatchServers(cfg, token) } : {}),
         };
@@ -165,6 +175,12 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
         });
         checkCancelled(job.signal);
         if (!agent.ok) throw new Error(agent.error ?? "agent failed");
+        if (pull) {
+            await postReview(cfg, pull, w.tree, task.id, answer.text);
+            await store.update(task.id, { status: "done", prUrl: pull.url });
+            status = "done";
+            return;
+        }
         // The issue is already on GitHub, so its PR only links it.
         const body =
             `${issue ? `Closes #${issue}` : task.body}\n\n---\n` +
@@ -173,7 +189,7 @@ export async function runTask(store: Store, cfg: Config, task: Task): Promise<vo
         const lines = w.commits && !review ? await stagedLines(w.tree) : {};
         const prUrl = review
             ? null
-            : await openPullRequest(cfg, w, task.title, body, existing, {
+            : await openPullRequest(cfg, w, typedTitle(answer.type, task.title), body, existing, {
                   pr: !subtask && !parentRun,
                   committed: merging,
               });

@@ -209,6 +209,8 @@ export const toTask = (r: Row): Task => ({
     integrations: JSON.parse(r.integrations ?? "[]"),
     automation: r.automation ?? null,
     issue: num(r.issue),
+    reviewPr: num(r.review_pr),
+    reviewSha: r.review_sha ?? null,
     thread: r.thread ?? null,
     retryOf: r.retry_of ?? null,
     model: r.model ?? null,

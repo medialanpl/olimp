@@ -51,8 +51,13 @@ export interface RepoSettings {
     draftPr: boolean;
     // Labels on every pull request OLIMP opens, e.g. `olimp`.
     prLabels: string[];
-    // The agent names the kind of change (fix, feat…), which labels its task's pull request.
+    // The agent names the kind of change (fix, feat…), which labels its task's pull request and
+    // starts its title.
     typeLabel: boolean;
+    // A fresh agent reviews each new head of the repository's open pull requests and OLIMP posts
+    // the review as a comment; queued as the account that turned it on.
+    prReview: boolean;
+    prReviewAuthor: string | null;
     // OLIMP merges its own pull requests with this label once every check passed; null never.
     autoMergeLabel: string | null;
     // The knowledge base: agent steps get the olimp-memory tools and the memory upkeep runs. Off,
@@ -72,6 +77,8 @@ export const noSettings = (): RepoSettings => ({
     draftPr: false,
     prLabels: [],
     typeLabel: false,
+    prReview: false,
+    prReviewAuthor: null,
     autoMergeLabel: null,
     memory: false,
     areas: [],
@@ -201,6 +208,7 @@ export function settingsPatch(current: RepoSettings, body: Record<string, unknow
         next.prLabels = [...new Set(body.prLabels.map(labelOf))];
     }
     if (body.typeLabel !== undefined) next.typeLabel = flagOf(body.typeLabel, "typeLabel");
+    if (body.prReview !== undefined) next.prReview = flagOf(body.prReview, "prReview");
     if (body.autoMergeLabel !== undefined)
         next.autoMergeLabel = body.autoMergeLabel === null ? null : labelOf(body.autoMergeLabel);
     if (body.memory !== undefined) next.memory = flagOf(body.memory, "memory");

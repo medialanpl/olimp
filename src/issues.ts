@@ -1,6 +1,7 @@
 import type { Config } from "./config.ts";
 import { TASK_BODY_MAX, TITLE_MAX } from "./limits.ts";
 import { must } from "./proc.ts";
+import { pollReviews } from "./reviews.ts";
 import { projectAgent } from "./settings.ts";
 import type { Store, Task } from "./store.ts";
 
@@ -73,14 +74,15 @@ export async function pollIssues(store: Store, cfg: Config): Promise<Task[]> {
     return created;
 }
 
-export function startIssuePoller(store: Store, cfg: Config): () => void {
+export function startGithubPoller(store: Store, cfg: Config): () => void {
     let timer: NodeJS.Timeout | undefined;
     let stopped = false;
     const tick = async () => {
         try {
             await pollIssues(store, cfg);
+            await pollReviews(store, cfg);
         } catch (error) {
-            console.error(`issues: ${error}`);
+            console.error(`github poll: ${error}`);
         }
         if (!stopped) timer = setTimeout(tick, ISSUE_POLL_MS);
     };

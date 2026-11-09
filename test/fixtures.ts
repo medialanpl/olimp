@@ -155,6 +155,9 @@ ${clones}
     echo "$4 $8" >> "${files.issueCalls}"
     f="${root}/issues-$(echo "$4" | tr / _).json"
     [ -f "$f" ] && cat "$f" || { echo "could not resolve to a Repository: $4" >&2; exit 1; } ;;
+  "pr list --repo")
+    f="${root}/pulls-$(echo "$4" | tr / _).json"
+    [ -f "$f" ] && cat "$f" || echo '[]' ;;
   "pr create "*) printf '%s\\n' "$@" > "${files.prArgs}"; echo "https://github.com/acme/demo/pull/7" ;;
   "pr view "*) cat "${files.prView}" 2>/dev/null || echo '{"mergeable":"MERGEABLE"}' ;;
   "pr comment "*|"pr edit "*|"pr ready "*|"issue comment "*|"label create "*) echo "$*" >> "${files.calls}" ;;

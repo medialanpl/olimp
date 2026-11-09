@@ -183,7 +183,7 @@ curl -s localhost:4850/api/tasks
 | `GET /api/repos/:id/branches` | `{base, branches}`: the project's branches (local and origin's, without `olimp/*`) and its base; `repo.noGit` for a folder without git |
 | `POST /api/repos/:id/branches` `{name}` | create a local branch from the base (origin's for a project on GitHub) without checking it out or pushing it; `{base, branches}` as above (`repo.invalidBranch` for a name git refuses or one under `olimp/`, `repo.branchExists`) |
 | `PUT /api/repos/:id/branch` `{branch}` | set the base: new tasks start from it and their pull requests target it (`repo.unknownBranch`) |
-| `PATCH /api/repos/:id/settings` `{instructions?, workspace?, keepWorktrees?, worktreeScripts?, defaultSkill?, teamSkills?, draftPr?, prLabels?, typeLabel?, autoMergeLabel?, memory?, areas?}` | the project's own settings, see [Project settings](#project-settings); `autoMergeLabel` and `worktreeScripts` admin only; `memory`: the knowledge base, off by default (see [Repository memory](#repository-memory)); `areas`: up to 5 other projects whose memory is a knowledge area of this one (`project.unknownArea`) |
+| `PATCH /api/repos/:id/settings` `{instructions?, workspace?, keepWorktrees?, worktreeScripts?, defaultSkill?, teamSkills?, draftPr?, prLabels?, typeLabel?, prReview?, autoMergeLabel?, memory?, areas?}` | the project's own settings, see [Project settings](#project-settings); `prReview` only for a project on GitHub (`github.localProject`), with `prReviewAuthor` set to the caller who turns it on; `autoMergeLabel` and `worktreeScripts` admin only; `memory`: the knowledge base, off by default (see [Repository memory](#repository-memory)); `areas`: up to 5 other projects whose memory is a knowledge area of this one (`project.unknownArea`) |
 | `GET /api/repos/:id/github/issues`, `…/github/prs` | the project's open issues or pull requests on GitHub (up to 100) with their labels and colors (`github.localProject` for a project not on GitHub, `github.unavailable` when `gh` fails) |
 | `GET /api/repos/:id/github/issues/:n`, `…/github/prs/:n` | one with its body and comments; a pull request also with `merge`: GitHub's `status`, `ready` (a person may merge), `auto` (every check passed, at least one ran), `headSha`, the repository's `methods` and each check |
 | `POST /api/repos/:id/github/prs/:n/merge` `{method, sha}` | merge with the installation's `gh` login, pinned to the head commit read before (`github.mergeRefused` when GitHub refuses, e.g. a newer commit); admin only |
@@ -198,7 +198,7 @@ curl -s localhost:4850/api/tasks
 | `GET /api/tasks/:id/subtasks` | the subtasks a dispatched task's agent added, oldest first; its `dispatchMerge` names the step that merges them |
 | `GET /api/task-groups/:group`, `POST …/pick` `{task}` | the variants of one prompt; keep one once all finished: the others are archived, their pull requests closed and branches deleted |
 | `GET`, `PUT /api/prompt-templates` `{templates}` | the composer's prompt templates; `null` while the panel's built-in ones apply |
-| `GET /api/tasks/:id` | status, branch, pull request, error, the agent's answer (`log`), `skill`, `integrations`, `automation`, `issue`, `thread`, `retryOf`, `author`, the lines its commit adds and deletes (`linesAdded`, `linesDeleted`), the agent's session a continuation resumes (`sessionId`), and usage: `turns`, `costUsd`, `inputTokens`, `outputTokens`, `durationMs`; `task.notFound` if there is none |
+| `GET /api/tasks/:id` | status, branch, pull request, error, the agent's answer (`log`), `skill`, `integrations`, `automation`, `issue`, `reviewPr` and `reviewSha` (the pull request a review task reviews and the head it was queued for), `thread`, `retryOf`, `author`, the lines its commit adds and deletes (`linesAdded`, `linesDeleted`), the agent's session a continuation resumes (`sessionId`), and usage: `turns`, `costUsd`, `inputTokens`, `outputTokens`, `durationMs`; `task.notFound` if there is none |
 | `GET`, `POST /api/{tasks,workflow-runs}/:id/terminals`, `…/terminals/:sid/output?cursor=`, `POST …/input`, `POST …/resize`, `DELETE …/:sid`, `GET …/terminals/urls`, `GET …/terminals/commands` | the shells of a task's thread or a workflow run in its folder, REST only (see [Terminal](architecture.md#terminal)) |
 | `GET /api/tasks/:id/trace` | `{task, events}`: the agent's events in order (see [Trace, costs and live events](#trace-costs-and-live-events)) |
 | `GET /api/tasks/:id/changes` | `{task, branch, base, head, files, diff, …}`: what the task's branch changes against the default branch (see [Changes](#changes)) |
@@ -288,7 +288,9 @@ Instructions, Tasks, Agent config and Worktrees.
   (`defaultSkill`), whether it offers the skill sources' skills (`teamSkills`), pull requests as
   drafts (`draftPr`), labels on every pull request OLIMP opens (`prLabels`, made in the
   repository when missing), the kind of change as a label (`typeLabel`: the agent ends with
-  `OLIMP:TYPE fix`, `feat`, `docs`, `refactor`, `test`, `chore` or `perf`), auto-merge
+  `OLIMP:TYPE fix`, `feat`, `docs`, `refactor`, `test`, `chore` or `perf`, which also starts the
+  pull request's title, `fix: …`, unless the task's title has a type already), a review of every
+  pull request (`prReview`, see [Pull request review](#pull-request-review)), auto-merge
   (`autoMergeLabel`, admin only: every two minutes OLIMP merges its own open pull requests with
   that label once at least one check ran and every check passed, by the repository's first merge
   method, squash before merge before rebase), the check commands and GitHub issues.
@@ -745,6 +747,24 @@ on (`issueAuthor`).
 The label is the gate: on GitHub only people with triage access to a repository can label its
 issues, so an issue from anyone else in a public repository does not start an agent until a
 maintainer labels it.
+
+### Pull request review
+
+With `prReview` on (Project settings, Tasks, or `PATCH /api/repos/:id/settings`
+`{"prReview":true}`), the same 5-minute poll asks your `gh` for up to 30 open pull requests of the
+repository (`gh pr list`) and queues one review task for each new head: `reviewPr` is the pull
+request, `reviewSha` its head, and one head gives one review, also after a restart. Drafts wait
+until they are ready. A pull request from a fork is skipped, since its code is anyone's; a branch
+of the repository itself takes write access to push, which is the gate a label is for issues.
+
+When the task starts, OLIMP reads the pull request again (`gh pr view`; a closed one or one from a
+fork fails the task) and makes a worktree from its head. The agent gets the pull request's title
+and description quoted as text from GitHub, `git diff origin/<base>...HEAD` as the change, and is
+asked to report real defects and to change nothing; OLIMP posts its answer on the pull request
+(`gh pr comment`, up to 30,000 characters) with the reviewed commit and the task id, and sets the
+task's `prUrl` to the pull request. Nothing is committed or pushed. A retry or a continuation of a
+review task reviews the pull request's current head again. With accounts, reviews run as the
+account that switched them on (`prReviewAuthor`).
 
 ### Automations
 

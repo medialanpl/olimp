@@ -311,6 +311,11 @@ test("tasks, automations, workflows, runs, notes and memory record their author"
     assert.equal((await store.repo("demo"))?.issueAuthor, member.id);
     const off = await call("DELETE", "/api/repos/demo/issues", as(admin.token));
     assert.equal(off.json.issueAuthor, null);
+    // Reviews run as whoever turned them on, not as whoever saves the settings later.
+    const settings = "/api/repos/demo/settings";
+    await call("PATCH", settings, as(member.token, { prReview: true }));
+    await call("PATCH", settings, as(admin.token, { prReview: true, draftPr: true }));
+    assert.equal((await store.repo("demo"))?.settings.prReviewAuthor, member.id);
 });
 
 test("OLIMP_PUBLIC_HOST is accepted only while accounts exist, and refused at start without", async () => {

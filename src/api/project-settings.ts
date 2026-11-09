@@ -103,6 +103,10 @@ export async function projectSettingsRoute(
                         throw new HttpError(400, "project.unknownArea", { repo: id, area });
                 if (body.worktreeScripts !== undefined)
                     await checkScripts(settings.worktreeScripts);
+                if (settings.prReview && !repo.settings.prReview) {
+                    if (!repo.github) throw new HttpError(400, "github.localProject", { repo: id });
+                    settings.prReviewAuthor = actor?.id ?? null;
+                }
                 const saved = (await store.setRepoSettings(id, settings)) as Repo;
                 await ensureUpkeep(store, saved);
                 return [200, withGit(cfg, saved)];

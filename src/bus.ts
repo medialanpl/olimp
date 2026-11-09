@@ -58,6 +58,7 @@ export function publishing(store: Store, bus: EventBus): Store {
     const after: Partial<Record<keyof Store, (args: unknown[], result: unknown) => unknown>> = {
         createTask: (_, result) => created(result),
         createIssueTask: (_, result) => created(result),
+        createReviewTask: (_, result) => created(result),
         runAutomation: (_, result) => created(result),
         createRun: (_, result) => created(result),
         update: ([id]) => task(id as string),

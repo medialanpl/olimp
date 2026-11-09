@@ -635,16 +635,24 @@ export class SqliteDatabase implements Database {
         return this.insertTask(input);
     }
 
-    private insertTask(input: TaskInput & { issue?: number }): Task | undefined {
+    async createReviewTask(
+        input: TaskInput & { reviewPr: number; reviewSha: string },
+    ): Promise<Task | undefined> {
+        return this.insertTask(input);
+    }
+
+    private insertTask(
+        input: TaskInput & { issue?: number; reviewSha?: string },
+    ): Task | undefined {
         const id = newId();
         const now = new Date().toISOString();
         const inserted = this.db
             .prepare(
                 "INSERT INTO tasks (id, repo, title, body, agent, skill, integrations, automation, " +
-                    "issue, author, thread, retry_of, model, attachments, variant_group, variant, dispatch, parent, " +
+                    "issue, review_pr, review_sha, author, thread, retry_of, model, attachments, variant_group, variant, dispatch, parent, " +
                     "parent_run, workspace, branch_name, " +
                     "status, created_at, updated_at) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?) " +
                     "ON CONFLICT DO NOTHING",
             )
             .run(
@@ -657,6 +665,8 @@ export class SqliteDatabase implements Database {
                 JSON.stringify(input.integrations ?? []),
                 input.automation ?? null,
                 input.issue ?? null,
+                input.reviewPr ?? null,
+                input.reviewSha ?? null,
                 input.author ?? null,
                 input.thread ?? null,
                 input.retryOf ?? null,

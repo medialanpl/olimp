@@ -177,6 +177,7 @@ const template = (task: Task) => ({
     thread: task.thread,
     model: task.model,
     attachments: task.attachments,
+    reviewPr: task.reviewPr,
 });
 
 export async function tasksRoute(

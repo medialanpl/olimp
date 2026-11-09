@@ -106,7 +106,11 @@ export function registerProjectSettingsTools(server: McpServer, call: Call): voi
                 "draftPr: open pull requests as drafts. prLabels: labels on every pull request " +
                 "OLIMP opens (made in the repository when missing). typeLabel: the agent names " +
                 "the kind of change (fix, feat, docs, refactor, test, chore, perf) and its task's " +
-                "pull request gets it as a label. autoMergeLabel (admin only): OLIMP merges its " +
+                "pull request gets it as a label and starts its title with it (fix: …). prReview: " +
+                "every few minutes OLIMP queues a review task for each new head of the " +
+                "repository's open pull requests (not drafts, not from forks), run as the caller " +
+                "who turned it on; a fresh agent reviews the head and OLIMP posts its answer as a " +
+                "comment. autoMergeLabel (admin only): OLIMP merges its " +
                 "own pull requests with this label once at least one check ran and every check " +
                 "passed; null turns it off. memory: the knowledge base, off by default: on, its " +
                 "agent steps get the olimp-memory MCP server, whose tools search and read the " +
@@ -142,6 +146,7 @@ export function registerProjectSettingsTools(server: McpServer, call: Call): voi
                     .max(AREAS_MAX)
                     .optional(),
                 typeLabel: z.boolean().optional(),
+                prReview: z.boolean().optional(),
                 autoMergeLabel: z
                     .string()
                     .min(1)

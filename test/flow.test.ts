@@ -19,6 +19,7 @@ import { pollIssues } from "../src/issues.ts";
 import { stepOf } from "../src/memory.ts";
 import { must, run } from "../src/proc.ts";
 import { noSettings, setSecret } from "../src/project.ts";
+import { pollReviews } from "../src/reviews.ts";
 import { runTask, startWorker, waits } from "../src/runner.ts";
 import { runDue } from "../src/scheduler.ts";
 import {
@@ -148,6 +149,76 @@ test("a clone with a fork as remote.pushDefault pushes there and opens the pull 
     assert.equal(file, "change\nchange");
 });
 
+test("each new head of an open pull request gets one review, posted as a comment, with nothing pushed", async () => {
+    const { cfg, store } = await setup(
+        'case "$*" in *"review of pull request #3 of acme/demo"*"Adds F.md"*"Change, commit and push nothing"*) ;; *) exit 4 ;; esac; echo stray > STRAY.md; git log -1 --format=%s; echo "No defects."',
+    );
+    const work = join(root, `feature-${n}`);
+    await must("git", ["clone", "-q", bare, work]);
+    await must("git", ["-C", work, "switch", "-q", "-c", "feature"]);
+    writeFileSync(join(work, "F.md"), "f\n");
+    await must("git", ["-C", work, "add", "-A"]);
+    await must("git", ["-C", work, "commit", "-qm", "Add feature"]);
+    await must("git", ["-C", work, "push", "-q", "origin", "feature"]);
+    const sha = await must("git", ["-C", work, "rev-parse", "HEAD"]);
+    const repo = (await store.repo("demo")) as Repo;
+    await store.setRepoSettings("demo", { ...repo.settings, prReview: true });
+    const listed = (number: number, more = {}) => ({
+        number,
+        title: "Add feature",
+        url: `https://github.com/acme/demo/pull/${number}`,
+        headRefOid: sha,
+        isDraft: false,
+        isCrossRepository: false,
+        ...more,
+    });
+    writeFileSync(
+        join(root, "pulls-acme_demo.json"),
+        JSON.stringify([
+            listed(3),
+            listed(4, { isDraft: true }),
+            listed(5, { isCrossRepository: true }),
+        ]),
+    );
+    const [review, ...more] = await pollReviews(store, cfg);
+    assert.deepEqual(more, []);
+    assert.deepEqual(
+        [review?.reviewPr, review?.reviewSha, review?.title],
+        [3, sha, "Review #3: Add feature"],
+    );
+    assert.deepEqual(await pollReviews(store, cfg), []);
+    const files = ghFiles(root);
+    writeFileSync(
+        files.prView,
+        JSON.stringify({
+            ...listed(3),
+            body: "Adds F.md",
+            state: "OPEN",
+            headRefName: "feature",
+            baseRefName: "main",
+        }),
+    );
+    try {
+        await runTask(store, cfg, review as Task);
+    } finally {
+        rmSync(files.prView, { force: true });
+        rmSync(join(root, "pulls-acme_demo.json"), { force: true });
+    }
+    const done = await store.task(review?.id ?? "");
+    assert.equal(done?.status, "done", `${done?.error}\n${done?.log}`);
+    assert.equal(done?.prUrl, "https://github.com/acme/demo/pull/3");
+    const calls = readFileSync(files.calls, "utf8");
+    assert.match(calls, /^pr comment 3 --repo acme\/demo --body Add feature$/m);
+    assert.match(
+        calls,
+        new RegExp(`^OLIMP review of \`[0-9a-f]{12}\`, task \`${done?.id}\`$`, "m"),
+    );
+    assert.notEqual(
+        (await run("git", ["-C", bare, "rev-parse", "--verify", `olimp/${done?.id}`])).code,
+        0,
+    );
+});
+
 test("a continuation after a failed push sends the thread's commit and opens the pull request", async () => {
     const { cfg, store } = await setup("[ -f CHANGED.md ] || echo change > CHANGED.md");
     const clone = repoDir(cfg, (await store.repo("demo")) as Repo);
@@ -177,6 +248,8 @@ test("with type labels the agent names the change, and its pull request gets it 
     const done = await store.task(task.id);
     assert.equal(done?.status, "done", done?.error ?? "");
     assert.equal(done?.log.trim(), "fixed");
+    const args = readFileSync(ghFiles(root).prArgs, "utf8").split("\n");
+    assert.equal(args[args.indexOf("--title") + 1], "fix: Fix it");
     const calls = readFileSync(ghFiles(root).calls, "utf8");
     assert.match(calls, /^label create fix --repo acme\/demo --color d73a4a$/m);
     assert.match(

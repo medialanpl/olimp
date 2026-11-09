@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { after, test } from "node:test";
 import { createApi } from "../src/api.ts";
 import { loadConfig } from "../src/config.ts";
-import { autoMerge, labelPr, mergeView, parseType } from "../src/github.ts";
+import { autoMerge, labelPr, mergeView, parseType, typedTitle } from "../src/github.ts";
 import type { Repo } from "../src/store.ts";
 import { openStore, script } from "./fixtures.ts";
 
@@ -104,6 +104,12 @@ test("the agent's type marker is read and taken off its answer", () => {
     assert.deepEqual(parseType("Done.\nOLIMP:TYPE Docs"), { type: "docs", text: "Done." });
     assert.deepEqual(parseType("Done.\nOLIMP:TYPE wip"), { type: null, text: "Done." });
     assert.deepEqual(parseType("No marker"), { type: null, text: "No marker" });
+});
+
+test("the type starts the pull request's title unless the title has one", () => {
+    assert.equal(typedTitle("fix", "1. Sidebar toggle hidden"), "fix: 1. Sidebar toggle hidden");
+    assert.equal(typedTitle("fix", "feat(web)!: Docs page"), "feat(web)!: Docs page");
+    assert.equal(typedTitle(null, "Docs page"), "Docs page");
 });
 
 test("a person may merge what GitHub allows; unattended merging needs every check green", () => {

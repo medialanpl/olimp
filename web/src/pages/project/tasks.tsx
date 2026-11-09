@@ -4,6 +4,7 @@ import {
     GitBranchIcon,
     GitMergeIcon,
     GitPullRequestDraftIcon,
+    MessageSquareCodeIcon,
     SaveIcon,
     SparklesIcon,
     TagIcon,
@@ -133,7 +134,7 @@ export function Toggle({
     label,
 }: {
     repo: Repo;
-    field: "teamSkills" | "draftPr" | "typeLabel" | "memory";
+    field: "teamSkills" | "draftPr" | "typeLabel" | "prReview" | "memory";
     label: string;
 }) {
     const t = useTranslations("web");
@@ -498,6 +499,18 @@ export function Tasks({ repo }: { repo: Repo }) {
                                     repo={repo}
                                     field="typeLabel"
                                     label={t("repo.typeLabelTitle")}
+                                />
+                            </Row>
+                            <Row
+                                icon={<MessageSquareCodeIcon />}
+                                id="prReview"
+                                title={t("repo.prReviewTitle")}
+                                hint={t("repo.prReviewHint")}
+                            >
+                                <Toggle
+                                    repo={repo}
+                                    field="prReview"
+                                    label={t("repo.prReviewTitle")}
                                 />
                             </Row>
                             <Row

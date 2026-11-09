@@ -213,6 +213,10 @@ export interface Task extends TaskTemplate, TaskExtras, Authored, Usage {
     automation: string | null;
     // The GitHub issue the task came from, unique within its repository.
     issue: number | null;
+    // The pull request the task reviews, and the head the poll queued it for (unique with it);
+    // a retry or continuation reviews it again with no head of its own.
+    reviewPr: number | null;
+    reviewSha: string | null;
     // The first task of the thread this one continues, on that task's branch; null for a first.
     thread: string | null;
     // The task this one retries.
@@ -254,6 +258,7 @@ export type TaskInput = Pick<Task, "repo" | "title" | "body"> &
             | "parentRun"
             | "workspace"
             | "branchName"
+            | "reviewPr"
         >
     >;
 
@@ -573,6 +578,10 @@ export interface Database {
     // Undefined when the issue already has a task in its repository: the INSERT and the unique
     // index decide in one statement, so concurrent polls cannot both queue it.
     createIssueTask(input: TaskInput & { issue: number }): Promise<Task | undefined>;
+    // Undefined when a review of that head was queued already.
+    createReviewTask(
+        input: TaskInput & { reviewPr: number; reviewSha: string },
+    ): Promise<Task | undefined>;
     task(id: string): Promise<Task | undefined>;
     tasks(limit?: number): Promise<Task[]>;
     // The first task of a thread and its continuations, oldest first.

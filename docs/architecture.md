@@ -169,7 +169,10 @@ The task `error` and `log` fields are raw output too.
   `codex`), `skill` (`owner/repo:name` or null), `integrations` (JSON list of integration names of
   the repository, `[]` by default), `automation` (id of the automation that queued it, or null;
   kept after the automation is deleted), `issue` (the GitHub issue number or null; a unique
-  index on `repo` and `issue` keeps one task per issue), `thread` (the first task of the thread a
+  index on `repo` and `issue` keeps one task per issue), `review_pr` and `review_sha` (the pull
+  request a review task reviews and the head the poll queued it for; a unique index on `repo`,
+  `review_pr` and `review_sha` keeps one review per head, while a retry or continuation copies
+  only `review_pr`; migration 23), `thread` (the first task of the thread a
   continuation belongs to, null for a first task; indexed with `created_at`), `retry_of` (the task
   it retries), `status` (`queued`, `running`, `done`, `failed`, `cancelled`), `branch`, `pr_url`,
   `error`, `log` (the agent's final answer, or the last 100 kB of its raw output when it gave

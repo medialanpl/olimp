@@ -11,7 +11,7 @@ import { loadConfig, publicHostProblem, resolveBin } from "./config.ts";
 import { startAutoMerge } from "./github.ts";
 import { HttpError } from "./http.ts";
 import { t } from "./i18n.ts";
-import { startIssuePoller } from "./issues.ts";
+import { startGithubPoller } from "./issues.ts";
 import { currentVersion, startUpdateCheck } from "./machine.ts";
 import { loadMail } from "./mail.ts";
 import { ensureUpkeep } from "./memory-upkeep.ts";
@@ -172,7 +172,7 @@ export async function start(folder: string | null = null): Promise<void> {
     startWorker(store, cfg);
     startWaits(store, cfg);
     startScheduler(store);
-    startIssuePoller(store, cfg);
+    startGithubPoller(store, cfg);
     startAutoMerge(store, cfg);
     startEventPurge(store);
     startUpdateCheck();

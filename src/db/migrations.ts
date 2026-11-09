@@ -798,4 +798,19 @@ export const MIGRATIONS: { version: number; sql: { sqlite: string; mysql: string
             ],
         },
     },
+    // The pull request a task reviews, and the head it was queued for: one review per head.
+    {
+        version: 23,
+        sql: {
+            sqlite:
+                "ALTER TABLE tasks ADD COLUMN review_pr INTEGER;\n" +
+                "ALTER TABLE tasks ADD COLUMN review_sha TEXT;\n" +
+                "CREATE UNIQUE INDEX tasks_review ON tasks (repo, review_pr, review_sha) " +
+                "WHERE review_sha IS NOT NULL;",
+            mysql: [
+                "ALTER TABLE tasks ADD COLUMN review_pr INT, ADD COLUMN review_sha CHAR(40), " +
+                    "ADD UNIQUE INDEX tasks_review (repo, review_pr, review_sha)",
+            ],
+        },
+    },
 ];

@@ -21,7 +21,11 @@ const TYPE_LINE = /\s*OLIMP:TYPE[ \t:=]+([A-Za-z]+)\s*$/;
 export const typeRequest = () =>
     `\n\nWhen you finish, end your final message with \`${TYPE_MARKER} <type>\` on its own last ` +
     `line, the kind of change you made, one of: ${PR_TYPES.join(", ")}. OLIMP labels the pull ` +
-    "request with it.";
+    "request with it and starts its title with it.";
+
+// A pull request title in the Conventional Commits form, `fix: …`, unless it has a type already.
+export const typedTitle = (type: PrType | null, title: string) =>
+    type && !/^[a-z]+(\([\w-]+\))?!?: /.test(title) ? `${type}: ${title}` : title;
 
 // The kind of change the agent named on its last line, and its answer without that line.
 export function parseType(answer: string): { type: PrType | null; text: string } {
