@@ -786,4 +786,16 @@ export const MIGRATIONS: { version: number; sql: { sqlite: string; mysql: string
             ],
         },
     },
+    // The first run of the thread a run continues, as tasks have.
+    {
+        version: 22,
+        sql: {
+            sqlite:
+                "ALTER TABLE workflow_runs ADD COLUMN thread TEXT;\n" +
+                "CREATE INDEX workflow_runs_thread ON workflow_runs (thread, created_at);",
+            mysql: [
+                `ALTER TABLE workflow_runs ADD COLUMN thread ${ID}, ADD INDEX workflow_runs_thread (thread, created_at)`,
+            ],
+        },
+    },
 ];

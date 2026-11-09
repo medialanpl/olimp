@@ -74,6 +74,7 @@ export const keys = {
     subtasks: (task: string) => ["subtasks", task] as const,
     runs: ["runs"] as const,
     run: (id: string) => ["run", id] as const,
+    runThread: (id: string) => ["run-thread", id] as const,
     workflows: ["workflows"] as const,
     automations: ["automations"] as const,
     repos: ["repos"] as const,
@@ -393,6 +394,13 @@ export const useRun = (id: string) =>
     useQuery({
         queryKey: keys.run(id),
         queryFn: () => api<WorkflowRun>(`/api/workflow-runs/${id}`),
+    });
+
+export const useRunThread = (id: string) =>
+    useQuery({
+        queryKey: keys.runThread(id),
+        queryFn: () => api<WorkflowRun[]>(`/api/workflow-runs/${id}/thread`),
+        enabled: !!id,
     });
 
 export const useWorkflows = () =>

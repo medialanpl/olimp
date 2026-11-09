@@ -97,6 +97,7 @@
         "notCancellable": "Workflow run {run} cannot be cancelled: it is {status}.",
         "notAsking": "Workflow run {run} is not waiting for an answer.",
         "notResumable": "Workflow run {run} cannot be resumed: it is {status}, and only a run whose last step failed goes on from that step.",
+        "threadBusy": "Workflow run {run} of this thread is still {status}: continue once it has finished.",
         "invalidAnswer": "A gate takes the answer approve or reject, not {answer}."
     },
     "costs": {
@@ -880,6 +881,10 @@
                 "title": "Stopped at {node}",
                 "hint": "Fix what made this step fail in the run's worktree, in the terminal say, then resume: the run goes on from this step with what the steps before it did. A fix on the base branch does not reach it, and a worktree made again from the run's branch has no files outside git. Retry starts the whole run over.",
                 "action": "Resume from this step"
+            },
+            "chat": {
+                "replyHint": "Continue: what should the next run of this workflow do?",
+                "busy": "The run is still going; you can continue once it finishes."
             },
             "flow": "Flow",
             "started": "Started {when}",

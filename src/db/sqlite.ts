@@ -1030,8 +1030,9 @@ export class SqliteDatabase implements Database {
         retryOf: string | null = null,
         input: string | null = null,
         parentRun: string | null = null,
+        thread: string | null = null,
     ): Promise<WorkflowRun> {
-        return this.insertRun(workflow, automation, author, retryOf, input, parentRun);
+        return this.insertRun(workflow, automation, author, retryOf, input, parentRun, thread);
     }
 
     private insertRun(
@@ -1041,14 +1042,15 @@ export class SqliteDatabase implements Database {
         retryOf: string | null = null,
         input: string | null = null,
         parentRun: string | null = null,
+        thread: string | null = null,
     ): WorkflowRun {
         const id = newId();
         const now = new Date().toISOString();
         this.db
             .prepare(
                 "INSERT INTO workflow_runs (id, workflow, name, repo, definition, automation, " +
-                    "author, retry_of, input, parent_run, status, created_at, updated_at) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)",
+                    "author, retry_of, input, parent_run, thread, status, created_at, updated_at) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)",
             )
             .run(
                 id,
@@ -1061,6 +1063,7 @@ export class SqliteDatabase implements Database {
                 retryOf,
                 input,
                 parentRun,
+                thread,
                 now,
                 now,
             );
@@ -1074,6 +1077,15 @@ export class SqliteDatabase implements Database {
 
     async run(id: string): Promise<WorkflowRun | undefined> {
         return this.readRun(id);
+    }
+
+    async threadRuns(thread: string): Promise<WorkflowRun[]> {
+        const rows = this.db
+            .prepare(
+                "SELECT * FROM workflow_runs WHERE id = ? OR thread = ? ORDER BY created_at, id",
+            )
+            .all(thread, thread) as Row[];
+        return rows.map(toRun);
     }
 
     async runs(limit = 100): Promise<RunSummary[]> {

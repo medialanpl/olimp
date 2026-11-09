@@ -225,4 +225,29 @@ export function registerWorkflowTools(server: McpServer, call: Call): void {
         },
         ({ id }) => call("POST", `/api/workflow-runs/${id}/resume`),
     );
+    server.registerTool(
+        "olimp_continue_workflow_run",
+        {
+            description:
+                "Queue the next run of a finished run's thread: the workflow as it is now, with " +
+                "input as its request, on the thread's branch and in its worktree, updating its " +
+                "pull request. Every agent step reads the earlier runs' requests and last answers " +
+                "first. Refused while a run of the thread is still queued, running or waiting.",
+            inputSchema: {
+                id: id.describe("Any run of the thread"),
+                input: z.string().min(1).max(TASK_BODY_MAX),
+            },
+        },
+        ({ id, input }) => call("POST", `/api/workflow-runs/${id}/continue`, { input }),
+    );
+    server.registerTool(
+        "olimp_get_workflow_run_thread",
+        {
+            description:
+                "Show the whole thread of a workflow run, oldest first: the first run and every " +
+                "continuation, each with its request, steps, status and usage.",
+            inputSchema: { id: id.describe("Any run of the thread") },
+        },
+        ({ id }) => call("GET", `/api/workflow-runs/${id}/thread`),
+    );
 }

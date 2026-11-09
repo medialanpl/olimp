@@ -246,7 +246,7 @@ export function startWorker(store: Store, cfg: Config, intervalMs = 2000): () =>
                 const parent = job.kind === "task" && !job.task.thread ? job.task.parent : null;
                 const next: Taken = {
                     repo: repoId,
-                    thread: job.kind === "task" ? (job.task.thread ?? id) : id,
+                    thread: job.kind === "task" ? (job.task.thread ?? id) : (job.run.thread ?? id),
                     // A task in the project's checkout takes turns with every other job there.
                     alone:
                         !repo ||

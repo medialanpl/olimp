@@ -93,6 +93,7 @@ function apply(client: QueryClient, event: BusEvent, onFinished: (job: Finished)
             });
         client.setQueryData<RunSummary[]>(keys.runs, (list) => upsert(list, run));
         void client.invalidateQueries({ queryKey: keys.run(run.id) });
+        void client.invalidateQueries({ queryKey: keys.runThread(run.thread ?? run.id) });
         if (FINISHED.has(run.status))
             void client.invalidateQueries({ queryKey: keys.changes("run", run.id) });
     } else if (event.type === "terminal") {

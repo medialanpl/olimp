@@ -197,7 +197,8 @@ The task `error` and `log` fields are raw output too.
   resolved to `owner/repo:name` and agent node integrations checked against `repo`),
   `created_at`, `updated_at`.
 - `workflow_runs`: `id`, `workflow` (kept after the workflow is deleted), copies of the workflow's
-  `name`, `repo` and `definition` taken when queued, `automation` (or null), `retry_of`, `status`
+  `name`, `repo` and `definition` taken when queued, `automation` (or null), `retry_of`, `thread`
+  (the thread's first run for a continuation, migration 22, indexed with `created_at`), `status`
   (`queued`, `running`, `waiting`, `done`, `failed`, `cancelled`), `parent_run` (the run whose
   sub-workflow node started it), `state` (JSON: node outputs, loop counters, sessions, transitions
   and what it waits for), `current_node` (null when done), `steps`
@@ -1010,6 +1011,22 @@ dashboard and the sidebar have one entry per thread with the first task's id, ti
 newest step's status and the thread's whole cost. Pinning and archiving act on the first task;
 reading, cancelling and retrying on the newest step. The API keeps listing every task.
 
+A workflow run has threads too. `POST /api/workflow-runs/:id/continue` `{input}` queues the next
+run of the thread (`thread` = the first run's id) with the workflow as it is now, or the run's own
+definition when the workflow was deleted or moved to another project; it is refused
+(`run.threadBusy`) while the thread's newest run is queued, running or waiting, since a waiting run
+holds the thread's worktree. The continuation works on `olimp/<first run id>` in
+`OLIMP_HOME/worktrees/<first run id>` (`runFolder`, also for resuming and for the terminals, which
+belong to the thread), reused when the branch only moves forward, as for a task. Unlike a task's,
+it starts from the clone's copy of the branch when the pushed one lacks its commits (a workflow
+with no push node, a push that failed), so nothing the thread did is reset away. Every agent step's
+prompt starts with the earlier runs of the thread in the task block's format (the run's name,
+request, status and the answer of its last agent step); nodes do not resume the earlier runs'
+sessions. The thread's pull request becomes the continuation's `prUrl`, so a `github.draft-pr`
+node pushes the new commits to it instead of opening another. A retry of a continuation stays in
+its thread. The run page's Conversation shows the whole thread (`GET …/thread`) with a composer
+below it; the lists keep one entry per run.
+
 ## Composer: models, attachments and variants
 
 A task's `model` (migration 13, with `attachments`, `variant_group` and `variant`) reaches the
@@ -1093,7 +1110,8 @@ the task and run lists it already holds, otherwise it asks `GET /api/tasks/:id` 
 (`web/src/components/job-page.tsx`): the full-height layout, the header with its metadata line and
 usage, the underlined tabs and the actions (Cancel while the job is active; Retry and the rest in
 the "…" menu, never where Cancel was; a run whose last step failed also shows a card that resumes
-it from that step, in Conversation and Flow). A run's metadata line links its workflow's editor, project,
+it from that step, in Conversation and Flow; a run's Conversation ends with a composer that
+continues its thread). A run's metadata line links its workflow's editor, project,
 branch, pull request, retry-of and parent run; its tabs are Flow (the card that answers a gate or a
 question, the graph with each node's visits in a side panel, every step in order), Changes, Trace
 and Notes (`web/src/components/run/`), since commits and files exist only for tasks. There are no

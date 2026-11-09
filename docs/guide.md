@@ -231,6 +231,8 @@ curl -s localhost:4850/api/tasks
 | `GET /api/workflow-runs`, `GET /api/workflow-runs/:id` | recent runs; one run with its definition, the state of every step (an agent step also with its `agent` and usage) and the usage of all its steps; `run.notFound` if there is none |
 | `GET /api/workflow-runs/:id/trace`, `POST …/cancel`, `POST …/retry` | the events of every agent step with its `node`; cancel (a waiting run also cancels the subtasks it waits for); queue again with the definition it ran with |
 | `POST /api/workflow-runs/:id/resume` | a run whose last step failed is queued again in place and goes on from that step with the outputs, loop counters and sessions of the steps before it, in its kept worktree or one made again from its branch (files outside git are then gone); `run.notResumable` otherwise |
+| `GET /api/workflow-runs/:id/thread` | the run's whole thread, oldest first: the first run and every continuation |
+| `POST /api/workflow-runs/:id/continue` `{input}` | the next run of the thread: the workflow as it is now with `input` as its request, on the thread's branch and in its worktree, pushing to its pull request; every agent step reads the earlier runs' requests and last answers first; `run.threadBusy` while a run of the thread is queued, running or waiting |
 | `POST /api/workflow-runs/:id/answer` `{answer, comment?}` | answer the gate (`approve` or `reject`) or question the run waits at; it is queued again; `run.notAsking` when it waits for none |
 | `GET /api/workflow-runs/:id/changes` | what the run's branch changes against the default branch, as for a task |
 | `GET /` and any other path outside `/api` | the web panel from `web/dist` (no token needed for its files) |
@@ -910,6 +912,7 @@ Errors are `{"error": "<message>", "code": "<key>"}`. Rely on `code` (e.g. `repo
 `olimp_list_workflows`, `olimp_create_workflow`, `olimp_get_workflow`, `olimp_update_workflow`,
 `olimp_delete_workflow`, `olimp_run_workflow`, `olimp_list_workflow_runs`, `olimp_get_workflow_run`,
 `olimp_get_workflow_run_trace`, `olimp_get_workflow_run_changes`, `olimp_cancel_workflow_run`, `olimp_retry_workflow_run`,
+`olimp_continue_workflow_run`, `olimp_get_workflow_run_thread`,
 `olimp_answer_workflow_run`, `olimp_build_workflow`,
 `olimp_list_notes`, `olimp_add_note`, `olimp_delete_note`, `olimp_get_memory_map`,
 `olimp_get_memory_page`, `olimp_search_memory`, `olimp_create_memory_page`, `olimp_update_memory_page`,

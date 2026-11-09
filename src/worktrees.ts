@@ -82,7 +82,7 @@ export async function openCheckout(
 
 // `base` is the branch a new one starts from, the default branch unless given (a subtask's is
 // its dispatched task's branch). A workflow run's subtask starts from the run's branch in the
-// clone, `localBase`, which holds commits never pushed.
+// clone, `localBase`, which holds commits never pushed; so does a run's continuation.
 async function addWorktree(
     cfg: Config,
     repo: Repo,
@@ -109,24 +109,35 @@ async function addWorktree(
     const remote = repo.github ? "origin/" : "";
     // A continuation finds the branch where jobs push it: origin, or the clone's fork.
     const pushedTo = repo.github ? `${await pushRemote(w.clone)}/` : "";
+    const git = (...args: string[]) => run("git", ["-C", w.clone, ...args]);
+    const own = `refs/heads/${branch}`;
     try {
         const pushed =
             continued &&
             (
-                await run("git", [
-                    "-C",
-                    w.clone,
+                await git(
                     "rev-parse",
                     "--verify",
                     "--quiet",
-                    repo.github ? `refs/remotes/${pushedTo}${branch}` : `refs/heads/${branch}`,
-                ])
+                    repo.github ? `refs/remotes/${pushedTo}${branch}` : own,
+                )
             ).code === 0;
-        const start = pushed
-            ? `${pushedTo}${branch}`
-            : localBase && base
-              ? base
-              : `${remote}${base ?? repo.defaultBranch}`;
+        // A run's continuation keeps the clone's copy when the pushed one lacks its commits (no
+        // push node, a push that failed): starting from GitHub's would reset them away.
+        const unpushed =
+            continued &&
+            localBase &&
+            Boolean(repo.github) &&
+            (await git("rev-parse", "--verify", "--quiet", own)).code === 0 &&
+            (!pushed ||
+                (await git("merge-base", "--is-ancestor", own, `${pushedTo}${branch}`)).code !== 0);
+        const start = unpushed
+            ? branch
+            : pushed
+              ? `${pushedTo}${branch}`
+              : localBase && base
+                ? base
+                : `${remote}${base ?? repo.defaultBranch}`;
         // A finished job's kept worktree, or one left by a crash, may still hold the branch. A
         // continuation stays in its thread's, with the person's terminals, dependencies and env
         // files, when the branch only moves forward; otherwise the folder is made anew.
@@ -342,6 +353,9 @@ export async function openOlimpDir(tree: string): Promise<void> {
     }
 }
 
+// A run works in its thread's folder, named after the thread's first run.
+export const runFolder = (run: Pick<WorkflowRun, "id" | "thread">) => run.thread ?? run.id;
+
 // The worktree of a run that waited is still on disk; the worker opens it again. A resumed failed
 // run's may be gone (the project keeps none, or reclaimed it): it comes back from the run's local
 // branch, which holds the commits and the end-of-run autosave even when nothing was pushed.
@@ -354,10 +368,10 @@ export async function reopenWorktree(
     const repo = await store.repo(wr.repo);
     if (!repo) throw new Error(`repository ${wr.repo} is not registered`);
     const clone = repoDir(cfg, repo);
-    const branch = wr.branch ?? branchOf(wr.id);
+    const branch = wr.branch ?? branchOf(runFolder(wr));
     if (!isGitFolder(clone))
         return { repo, clone, tree: clone, branch, inPlace: true, commits: false };
-    const tree = join(worktreesDir(cfg), wr.id);
+    const tree = join(worktreesDir(cfg), runFolder(wr));
     const w = { repo, clone, tree, branch, inPlace: false, commits: true };
     if (existsSync(tree)) return { ...w, reused: true };
     if (!restore) throw new Error("the run's worktree is gone, so the run cannot go on");

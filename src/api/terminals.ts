@@ -22,7 +22,7 @@ import {
     writeTerminal,
 } from "../terminals.ts";
 import { agentHome, TOKEN_FILE } from "../users.ts";
-import { worktreesDir } from "../worktrees.ts";
+import { runFolder, worktreesDir } from "../worktrees.ts";
 import type { Answer } from "./shared.ts";
 
 const ROUTE =
@@ -48,7 +48,8 @@ async function ownerOf(store: Store, kind: string, id: string) {
     }
     const run = await store.run(id);
     if (!run) throw new HttpError(404, "run.notFound", { run: id });
-    return { owner: `run:${id}`, repoId: run.repo, tree: id, thread: null };
+    const folder = runFolder(run);
+    return { owner: `run:${folder}`, repoId: run.repo, tree: folder, thread: null };
 }
 
 // The line that resumes the thread's last Claude session by hand, on the login it ran on; a

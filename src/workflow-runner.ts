@@ -1,4 +1,4 @@
-import { projectAgent, runAgent } from "./agent-step.ts";
+import { projectAgent, runAgent, threadBlock } from "./agent-step.ts";
 import { resumes } from "./agents.ts";
 import type { Config } from "./config.ts";
 import { labelPr } from "./github.ts";
@@ -67,6 +67,7 @@ import {
     openWorktree,
     releaseWorktree,
     reopenWorktree,
+    runFolder,
     setUp,
     type Worktree,
 } from "./worktrees.ts";
@@ -126,6 +127,8 @@ interface Walk {
     site: NodeSite;
     signal: AbortSignal;
     by: string;
+    // The earlier runs of the thread, which every agent step reads first; empty for a first run.
+    thread: string;
 }
 
 type Outcome = (NodeResult & { from?: string }) | { wait: Omit<RunWait, "node" | "since"> };
@@ -136,7 +139,9 @@ const text = (walk: Walk, value: string) =>
 // A prompt that never names {{task}} gets the run's request after it, as before templates.
 function agentPrompt(walk: Walk, prompt: string): string {
     const rendered = text(walk, prompt);
-    return walk.wr.input && !mentionsTask(prompt) ? runRequest(rendered, walk.wr.input) : rendered;
+    const asked =
+        walk.wr.input && !mentionsTask(prompt) ? runRequest(rendered, walk.wr.input) : rendered;
+    return walk.thread + asked;
 }
 
 const inMs = (ms: number | undefined) => (ms ? new Date(Date.now() + ms).toISOString() : null);
@@ -243,13 +248,8 @@ async function checkNode(walk: Walk, node: NodeOf<"check">): Promise<NodeResult>
 
 async function pullRequestNode(walk: Walk, node: NodeOf<"github.draft-pr">): Promise<NodeResult> {
     const { store, wr, w } = walk;
+    // Open already (an earlier visit, or the thread's), it gets this run's commits.
     const existing = (await store.run(wr.id))?.prUrl ?? null;
-    if (existing)
-        return {
-            port: "created",
-            log: `pull request already open: ${existing}`,
-            outputs: { url: existing, number: prNumber(existing) ?? "" },
-        };
     if (!w.commits)
         return {
             port: "created",
@@ -262,24 +262,25 @@ async function pullRequestNode(walk: Walk, node: NodeOf<"github.draft-pr">): Pro
         w,
         title,
         prSummary(wr, walk.steps, walk.by),
-        null,
+        existing,
         {
             committed: (await ahead(walk.site)) > 0,
             draft: node.draft ?? w.repo.settings.draftPr,
             checkOwned: walk.site.checkOwned,
         },
     );
-    if (prUrl) {
+    if (prUrl && prUrl !== existing) {
         await store.updateRun(wr.id, { prUrl });
         await labelPr(walk.cfg, w.repo, prUrl, w.repo.settings.prLabels);
     }
     return {
         port: "created",
-        log:
-            prUrl ??
-            (w.repo.github
-                ? "no changes, no pull request"
-                : "committed on the branch: a local project has no pull request"),
+        log: existing
+            ? `pull request already open: ${existing}`
+            : (prUrl ??
+              (w.repo.github
+                  ? "no changes, no pull request"
+                  : "committed on the branch: a local project has no pull request")),
         outputs: { url: prUrl ?? "", number: prNumber(prUrl) ?? "" },
     };
 }
@@ -562,7 +563,9 @@ const record = (state: RunState, transitions: Transition[]) => {
 // that waits parks the run: it gives its worker slot back and keeps its worktree, and an answer,
 // CI or its subtasks queue it again, to go on from that node.
 export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): Promise<void> {
-    const job = await claim(store, "run", wr.id, wr.branch ?? branchOf(wr.id));
+    // A continuation works in its thread's worktree, on the branch of the thread's first run.
+    const folder = runFolder(wr);
+    const job = await claim(store, "run", wr.id, wr.branch ?? branchOf(folder));
     if (!job) return;
     const def = wr.definition;
     const state = wr.state ?? newState();
@@ -584,14 +587,24 @@ export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): P
                 store,
                 cfg,
                 wr.repo,
-                wr.id,
-                branchOf(wr.id),
-                false,
+                folder,
+                branchOf(folder),
+                wr.thread !== null,
                 parent ? (parent.branch ?? branchOf(parent.id)) : null,
-                Boolean(parent),
+                Boolean(parent) || wr.thread !== null,
             );
             await setUp(w);
         }
+        // The thread's worktree is this run's now; parked, nothing reclaims it meanwhile.
+        parked.add(folder);
+        const earlier = wr.thread
+            ? (await store.threadRuns(wr.thread)).filter(
+                  (r) => r.id !== wr.id && r.createdAt <= wr.createdAt,
+              )
+            : [];
+        // The thread's pull request gets the continuation's commits instead of a second one.
+        const prUrl = earlier.findLast((r) => r.prUrl)?.prUrl;
+        if (prUrl && !wr.prUrl) await store.updateRun(wr.id, { prUrl });
         state.checkOwned ??= {};
         const walk: Walk = {
             store,
@@ -613,6 +626,16 @@ export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): P
             },
             signal: job.signal,
             by: await requestedBy(store, wr.author),
+            thread: threadBlock(
+                earlier.map((r) => ({
+                    id: r.id,
+                    status: r.status,
+                    title: r.name,
+                    body: r.input ?? "",
+                    log: r.steps.findLast((s) => s.type === "agent")?.log ?? "",
+                    issue: null,
+                })),
+            ),
         };
         const finish = (step: Step, out: NodeResult) =>
             Object.assign(step, {
@@ -661,7 +684,6 @@ export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): P
                         status: "waiting",
                         ...(out.wait.children && { children: out.wait.children }),
                     });
-                    parked.add(wr.id);
                     waiting = true;
                     await save({ status: "waiting", currentNode: node.id });
                     void notifyJob(store, cfg, "run", wr.id);
@@ -711,7 +733,7 @@ export async function runWorkflow(store: Store, cfg: Config, wr: WorkflowRun): P
         }
         job.done();
         if (!waiting) {
-            parked.delete(wr.id);
+            parked.delete(folder);
             void notifyJob(store, cfg, "run", wr.id);
             await settleParent(store, cfg, "run", wr.id);
         }
@@ -816,7 +838,7 @@ export async function cancelWaitingRun(
         ),
     });
     for (const child of run.state?.wait?.children ?? []) await cancelJob(store, cfg, child, reason);
-    parked.delete(run.id);
+    parked.delete(runFolder(run));
     try {
         await releaseWorktree(store, await reopenWorktree(store, cfg, run));
     } catch (error) {
@@ -856,7 +878,7 @@ export function startWaits(store: Store, cfg: Config, intervalMs = 10_000): () =
         busy = true;
         try {
             for (const run of await store.waitingRuns()) {
-                parked.add(run.id);
+                parked.add(runFolder(run));
                 await checkWait(store, cfg, run, polled);
             }
         } catch (error) {

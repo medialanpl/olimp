@@ -129,7 +129,7 @@ export async function workflowsRoute(
     }
     if (path === "/api/workflow-runs" && method === "GET") return [200, await store.runs()];
     const runId =
-        /^\/api\/workflow-runs\/([0-9a-f]{12})(?:\/(trace|changes|cancel|retry|resume|read|answer))?$/.exec(
+        /^\/api\/workflow-runs\/([0-9a-f]{12})(?:\/(trace|changes|cancel|retry|resume|read|answer|thread|continue))?$/.exec(
             path,
         );
     if (runId) {
@@ -174,7 +174,24 @@ export async function workflowsRoute(
             )
                 throw new HttpError(409, "run.notFinished", { run: id, status: found.status });
             const copy = { ...found, id: found.workflow };
-            return [201, await store.createRun(copy, null, author, id, found.input)];
+            return [
+                201,
+                await store.createRun(copy, null, author, id, found.input, null, found.thread),
+            ];
+        }
+        if (action === "thread" && method === "GET")
+            return [200, await store.threadRuns(found.thread ?? found.id)];
+        if (action === "continue" && method === "POST") {
+            const input = text((await readJson(req)).input, "input", TASK_BODY_MAX);
+            const thread = found.thread ?? found.id;
+            const last = (await store.threadRuns(thread)).at(-1) ?? found;
+            if (last.status === "queued" || last.status === "running" || last.status === "waiting")
+                throw new HttpError(409, "run.threadBusy", { run: last.id, status: last.status });
+            // The workflow as it is now, unless it is gone or moved to another project.
+            const workflow = await store.workflow(found.workflow);
+            const template =
+                workflow?.repo === found.repo ? workflow : { ...found, id: found.workflow };
+            return [201, await store.createRun(template, null, author, null, input, null, thread)];
         }
         if (action === "resume" && method === "POST") {
             if (!(await resumeFailedRun(store, found)))

@@ -521,6 +521,33 @@ test("a retry is a new task with the same template, by the caller, linked to the
     assert.deepEqual(again.json.definition, queued.definition);
     const resumed = await asBob(`/api/workflow-runs/${again.json.id}/resume`);
     assert.deepEqual([resumed.status, resumed.json.code], [409, "run.notResumable"]);
+
+    const goOn = (id: string, input: unknown) =>
+        call(
+            "POST",
+            `/api/workflow-runs/${id}/continue`,
+            { input },
+            { authorization: "Bearer bob-token" },
+        );
+    const busy = await goOn(again.json.id as string, "More");
+    assert.deepEqual([busy.status, busy.json.code], [409, "run.threadBusy"]);
+    assert.equal((await goOn(queued.id, "")).status, 400);
+    const next = await goOn(queued.id, "Now the footer");
+    assert.equal(next.status, 201);
+    assert.deepEqual(
+        [next.json.thread, next.json.input, next.json.retryOf, next.json.author],
+        [queued.id, "Now the footer", null, bob?.user.id],
+    );
+    assert.deepEqual(next.json.definition, queued.definition);
+    const behind = await goOn(queued.id, "And the header");
+    assert.deepEqual([behind.status, behind.json.code], [409, "run.threadBusy"]);
+    const thread = await call("GET", `/api/workflow-runs/${next.json.id}/thread`, undefined, {
+        authorization: "Bearer bob-token",
+    });
+    assert.deepEqual(
+        (thread.json as unknown as { id: string }[]).map((r) => r.id),
+        [queued.id, next.json.id],
+    );
 });
 
 // A claude login in the account's HOME, as `pnpm agent-login` leaves it.

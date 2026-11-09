@@ -145,8 +145,10 @@ const cut = (text: string, max: number) =>
 // An earlier task of the thread may come from a GitHub issue, so no entry may close its block.
 const escapeThread = (text: string) => text.replace(/<\/(?=earlier-task|thread)/gi, "<\\/");
 
-// The last tasks of the thread before this one, newest last, within THREAD_MAX characters.
-export function threadBlock(earlier: Task[]): string {
+// The last tasks (or runs) of the thread before this one, newest last, within THREAD_MAX characters.
+export function threadBlock(
+    earlier: (Pick<Task, "id" | "title" | "body" | "log" | "issue"> & { status: string })[],
+): string {
     const entries: string[] = [];
     let size = 0;
     for (const t of earlier.slice(-THREAD_TASKS).reverse()) {

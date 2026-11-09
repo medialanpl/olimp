@@ -439,7 +439,7 @@ test("a database from before the agent column gets it with claude for old tasks"
         const migrated = await sqlite(old);
         assert.deepEqual(
             await migrated.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         const before = await migrated.task("0123456789ab");
         assert.equal(before?.agent, "claude");
@@ -1223,7 +1223,7 @@ test("a database from before workflows keeps its automations, which can then poi
         const migrated = await sqlite(old);
         assert.deepEqual(
             await migrated.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         assert.deepEqual(await migrated.automation("aaaaaaaaaaaa"), {
             id: "aaaaaaaaaaaa",
@@ -1631,7 +1631,7 @@ test("a database from stage 4 gets integrations and issues, its workflows keep w
         const migrated = await sqlite(old);
         assert.deepEqual(
             await migrated.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         assert.equal((await migrated.repo("demo"))?.issueLabel, null);
         const task = await migrated.task("0123456789ab");
@@ -1681,7 +1681,7 @@ test("a new SQLite database gets every migration once, a restart changes nothing
         const store = await sqlite(home);
         assert.deepEqual(
             await store.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         const schema = tablesOf(home);
         assert.ok(schema.some((t) => t.name === "schema_migrations"));
@@ -1691,7 +1691,7 @@ test("a new SQLite database gets every migration once, a restart changes nothing
         const again = await sqlite(home);
         assert.deepEqual(
             await again.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         assert.deepEqual(tablesOf(home), schema);
         assert.deepEqual(
@@ -1725,7 +1725,7 @@ test("a database from stage 5 keeps its data and the order of its notes", async 
         const migrated = await sqlite(old);
         assert.deepEqual(
             await migrated.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         assert.equal((await migrated.repo("demo"))?.issueLabel, "olimp");
         assert.deepEqual((await migrated.repo("demo"))?.commands, []);

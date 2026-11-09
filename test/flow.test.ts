@@ -909,6 +909,68 @@ test("an agent step reads the run's request in place of {{task}}, or after its p
     assert.doesNotMatch(quote, /started this workflow run asked/);
 });
 
+test("a run's continuation works in its thread's worktree and branch, with the thread in its prompt", async () => {
+    const s = await setup('echo change >> CHANGED.md; echo "$2"');
+    await s.store.setRepoSettings("demo", { ...removing(), keepWorktrees: 1 });
+    const workflow = await s.store.createWorkflow({
+        name: "Edit",
+        repo: "demo",
+        definition: parseDefinition(
+            chain(step("edit", "Edit"), { id: "pr", type: "github.draft-pr" }),
+        ),
+    });
+    const first = await s.store.createRun(workflow, null, null, null, "Add a file");
+    await runWorkflow(s.store, s.cfg, first);
+    const done = await again(s.store, first.id);
+    assert.equal(done.status, "done", done.error ?? "");
+    const next = await s.store.createRun(
+        workflow,
+        null,
+        null,
+        null,
+        "Now the footer",
+        null,
+        first.id,
+    );
+    await runWorkflow(s.store, s.cfg, next);
+    const continued = await again(s.store, next.id);
+    assert.equal(continued.status, "done", continued.error ?? "");
+    assert.equal(continued.branch, `olimp/${first.id}`);
+    assert.equal(continued.prUrl, done.prUrl);
+    assert.equal(continued.steps[1]?.log, `pull request already open: ${done.prUrl}`);
+    const prompt = continued.steps[0]?.log ?? "";
+    assert.match(prompt, new RegExp(`<earlier-task id="${first.id}" status="done">`));
+    assert.match(prompt, /Title: Edit\nRequest:\nAdd a file\nAnswer:\n/);
+    assert.match(prompt, /started this workflow run asked:\nNow the footer/);
+    const file = await run("git", ["-C", bare, "show", `olimp/${first.id}:CHANGED.md`]);
+    assert.equal(file.stdout, "change\nchange\n");
+    assert.equal(existsSync(join(s.home, "worktrees", first.id)), true);
+    assert.equal(existsSync(join(s.home, "worktrees", next.id)), false);
+    assert.deepEqual(
+        (await s.store.threadRuns(first.id)).map((r) => r.id),
+        [first.id, next.id],
+    );
+});
+
+test("a run's continuation keeps the commits its thread never pushed", async () => {
+    const s = await setup("echo change >> CHANGED.md");
+    const workflow = await s.store.createWorkflow({
+        name: "Local",
+        repo: "demo",
+        definition: parseDefinition(chain(step("edit", "Edit"))),
+    });
+    const first = await s.store.createRun(workflow, null, null, null, "One");
+    await runWorkflow(s.store, s.cfg, first);
+    assert.equal((await again(s.store, first.id)).status, "done");
+    assert.equal(await branchOnRemote(first.id), false);
+    const next = await s.store.createRun(workflow, null, null, null, "Two", null, first.id);
+    await runWorkflow(s.store, s.cfg, next);
+    assert.equal((await again(s.store, next.id)).status, "done");
+    const clone = repoDir(s.cfg, (await s.store.repo("demo")) as Repo);
+    const file = await must("git", ["-C", clone, "show", `olimp/${first.id}:CHANGED.md`]);
+    assert.equal(file, "change\nchange");
+});
+
 test("an if on the changes takes its false port, which ends the run without a pull request", async () => {
     const { cfg, store, home, queued } = await setupRun({
         nodes: withStart(

@@ -26,7 +26,7 @@ import {
 } from "@/components/job-page";
 import { NotesView } from "@/components/notes-view";
 import { RunGraph } from "@/components/run/graph";
-import { ResumeCard, RunChat } from "@/components/run/run-chat";
+import { ResumeCard, RunChat, RunComposer } from "@/components/run/run-chat";
 import { StepList } from "@/components/run/steps";
 import { WaitCard } from "@/components/run/wait-card";
 import { JobPageSkeleton, TerminalSkeleton } from "@/components/skeletons";
@@ -36,7 +36,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { TabsContent } from "@/components/ui/tabs";
 import { shortId, useFormat } from "@/lib/format";
 import { newTaskWith } from "@/lib/nav";
-import { useChanges, useReadOnOpen, useRun } from "@/lib/queries";
+import { useChanges, useReadOnOpen, useRun, useRunThread } from "@/lib/queries";
 
 const TABS = ["chat", "flow", "changes", "trace", "notes", "terminal", "preview"] as const;
 
@@ -50,6 +50,7 @@ export function RunView({ id }: { id: string }) {
     const [keepUnread, setKeepUnread] = useState(false);
     useReadOnOpen("run", id, query.data?.status, keepUnread);
     const changes = useChanges("run", id, !!query.data);
+    const thread = useRunThread(query.data ? (query.data.thread ?? query.data.id) : "");
     const [tab, setTab] = useJobTab(TABS);
     useTerminalShortcut(tab, setTab);
     const navigate = useNavigate();
@@ -58,6 +59,7 @@ export function RunView({ id }: { id: string }) {
     if (query.isError) return <JobPageError error={query.error} onRetry={() => query.refetch()} />;
     const run = query.data;
     const wait = run.status === "waiting" ? run.state?.wait : null;
+    const runs = thread.data?.length ? thread.data : [run];
 
     return (
         <JobPage
@@ -144,9 +146,10 @@ export function RunView({ id }: { id: string }) {
                     </JobTab>
                 </>
             }
+            footer={tab === "chat" && <RunComposer last={runs.at(-1) ?? run} />}
         >
             <TabsContent value="chat">
-                <RunChat run={run} />
+                <RunChat runs={runs} />
             </TabsContent>
             <TabsContent value="flow" className="space-y-6">
                 {wait && <WaitCard run={run} wait={wait} />}

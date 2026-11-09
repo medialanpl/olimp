@@ -1,10 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircleIcon, StepForwardIcon } from "lucide-react";
+import { AlertCircleIcon, GitBranchIcon, StepForwardIcon, WorkflowIcon } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 import { AgentAvatar, agentLabel } from "@/components/agent-mark";
 import { useNodeTitle, usePortLabel } from "@/components/flow/graph";
 import { Markdown } from "@/components/markdown";
 import { FormError } from "@/components/page";
+import { PromptBox } from "@/components/prompt-box";
 import { ChildLink, StepState } from "@/components/run/steps";
 import { WaitCard } from "@/components/run/wait-card";
 import { Activity, UserTurn } from "@/components/task-chat";
@@ -16,6 +19,10 @@ import { labelOf, nodeById } from "@/lib/flow";
 import { elapsed, useFormat } from "@/lib/format";
 import { keys, useTrace } from "@/lib/queries";
 import type { AgentEvent, AgentName, Step, WorkflowRun } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+const isBusy = (run: WorkflowRun) =>
+    run.status === "queued" || run.status === "running" || run.status === "waiting";
 
 function StepFacts({ step }: { step: Step }) {
     const t = useTranslations("web");
@@ -169,8 +176,8 @@ export function ResumeCard({ run }: { run: WorkflowRun }) {
     );
 }
 
-// The run as a conversation: the request, each agent's work and answer, and what waits for you.
-export function RunChat({ run }: { run: WorkflowRun }) {
+// One run of the thread: its request, each agent's work and answer, and what waits for you.
+function RunTurns({ run, last }: { run: WorkflowRun; last: boolean }) {
     const t = useTranslations("web");
     const trace = useTrace("run", run.id);
     const events = trace.data?.events ?? [];
@@ -184,6 +191,45 @@ export function RunChat({ run }: { run: WorkflowRun }) {
                 (!step.finishedAt || event.createdAt <= step.finishedAt),
         );
     return (
+        <>
+            <UserTurn
+                text={run.input?.trim() || run.name}
+                author={run.author}
+                createdAt={run.createdAt}
+            />
+            {run.steps.map((step) =>
+                step.type === "agent" && step.agent ? (
+                    <AgentStep
+                        key={`${step.node}-${step.startedAt}`}
+                        run={run}
+                        step={step}
+                        agent={step.agent}
+                        events={visit(step)}
+                    />
+                ) : (
+                    <NodeStep key={`${step.node}-${step.startedAt}`} run={run} step={step} />
+                ),
+            )}
+            {wait && <WaitCard run={run} wait={wait} />}
+            {run.error && run.error !== run.steps.at(-1)?.error && (
+                <Alert variant="destructive">
+                    <AlertTitle>{t("task.error")}</AlertTitle>
+                    <AlertDescription>
+                        <p className="whitespace-pre-wrap break-words font-mono text-xs">
+                            {run.error}
+                        </p>
+                    </AlertDescription>
+                </Alert>
+            )}
+            {last && <ResumeCard run={run} />}
+        </>
+    );
+}
+
+// The thread as one conversation, its first run and every continuation in order.
+export function RunChat({ runs }: { runs: WorkflowRun[] }) {
+    const t = useTranslations("web");
+    return (
         <div>
             <div className="mb-8 flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="h-px flex-1 bg-border" />
@@ -191,36 +237,63 @@ export function RunChat({ run }: { run: WorkflowRun }) {
                 <span className="h-px flex-1 bg-border" />
             </div>
             <div className="space-y-8">
-                <UserTurn
-                    text={run.input?.trim() || run.name}
-                    author={run.author}
-                    createdAt={run.createdAt}
+                {runs.map((run, index) => (
+                    <RunTurns key={run.id} run={run} last={index === runs.length - 1} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// The next run of the thread: the workflow again, on the thread's branch, with this request.
+export function RunComposer({ last }: { last: WorkflowRun }) {
+    const t = useTranslations("web");
+    const navigate = useNavigate();
+    const client = useQueryClient();
+    const [input, setInput] = useState("");
+    const busy = isBusy(last);
+    const send = useMutation({
+        mutationFn: (text: string) =>
+            api<WorkflowRun>(`/api/workflow-runs/${last.id}/continue`, {
+                method: "POST",
+                body: { input: text.trim() },
+            }),
+        onSuccess: (created) => {
+            setInput("");
+            void client.invalidateQueries({ queryKey: keys.runThread(last.thread ?? last.id) });
+            navigate(`/tasks/${created.id}`);
+        },
+    });
+    const context =
+        "inline-flex h-7 items-center gap-1.5 rounded-full bg-muted/60 px-2.5 text-xs text-muted-foreground [&_svg]:size-3.5";
+    return (
+        <div className="shrink-0 px-4 pt-2 pb-4 md:px-6">
+            <div className="space-y-2">
+                <PromptBox
+                    value={input}
+                    onChange={setInput}
+                    onSubmit={(text) => send.mutate(text)}
+                    label={t("task.chat.reply")}
+                    placeholder={busy ? t("runs.chat.busy") : t("runs.chat.replyHint")}
+                    disabled={busy}
+                    pending={send.isPending}
+                    canSend={!!input.trim()}
+                    toolbar={
+                        <>
+                            <span className={context}>
+                                <WorkflowIcon />
+                                <span className="max-w-48 truncate">{last.name}</span>
+                            </span>
+                            {last.branch && (
+                                <span className={cn(context, "font-mono")}>
+                                    <GitBranchIcon />
+                                    <span className="max-w-48 truncate">{last.branch}</span>
+                                </span>
+                            )}
+                        </>
+                    }
                 />
-                {run.steps.map((step) =>
-                    step.type === "agent" && step.agent ? (
-                        <AgentStep
-                            key={`${step.node}-${step.startedAt}`}
-                            run={run}
-                            step={step}
-                            agent={step.agent}
-                            events={visit(step)}
-                        />
-                    ) : (
-                        <NodeStep key={`${step.node}-${step.startedAt}`} run={run} step={step} />
-                    ),
-                )}
-                {wait && <WaitCard run={run} wait={wait} />}
-                {run.error && run.error !== run.steps.at(-1)?.error && (
-                    <Alert variant="destructive">
-                        <AlertTitle>{t("task.error")}</AlertTitle>
-                        <AlertDescription>
-                            <p className="whitespace-pre-wrap break-words font-mono text-xs">
-                                {run.error}
-                            </p>
-                        </AlertDescription>
-                    </Alert>
-                )}
-                <ResumeCard run={run} />
+                <FormError error={send.error} />
             </div>
         </div>
     );

@@ -20,7 +20,7 @@ const URL_CARRY = 256;
 
 export interface TerminalSession {
     id: string;
-    // `task:<first task of the thread>` (its steps share a folder) or `run:<id>`.
+    // `task:<first task of the thread>` or `run:<first run of the thread>`: its steps share a folder.
     owner: string;
     repo: string;
     cwd: string;

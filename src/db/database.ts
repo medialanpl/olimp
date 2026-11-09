@@ -393,6 +393,8 @@ export interface WorkflowRun extends Authored, Usage {
     automation: string | null;
     // The run this one retries.
     retryOf: string | null;
+    // The first run of the thread this one continues, on that run's branch; null for a first.
+    thread: string | null;
     // What the user who started the run asked; every agent step sees it.
     input: string | null;
     // The run of a sub-workflow node that started this one.
@@ -634,8 +636,11 @@ export interface Database {
         retryOf?: string | null,
         input?: string | null,
         parentRun?: string | null,
+        thread?: string | null,
     ): Promise<WorkflowRun>;
     run(id: string): Promise<WorkflowRun | undefined>;
+    // The first run of a thread and its continuations, oldest first.
+    threadRuns(thread: string): Promise<WorkflowRun[]>;
     runs(limit?: number): Promise<RunSummary[]>;
     updateRun(id: string, patch: RunPatch): Promise<void>;
     // A waiting run back in the queue with what ended its wait, or a failed one to go on from its

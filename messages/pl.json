@@ -97,6 +97,7 @@
         "notCancellable": "Uruchomienia workflow {run} nie można anulować: ma stan {status}.",
         "notAsking": "Uruchomienie workflow {run} nie czeka na odpowiedź.",
         "notResumable": "Uruchomienia workflow {run} nie da się wznowić: ma stan {status}, a wznawia się tylko uruchomienie, którego ostatni krok się nie udał.",
+        "threadBusy": "Uruchomienie workflow {run} z tego wątku ma jeszcze stan {status}: kontynuuj, gdy się zakończy.",
         "invalidAnswer": "Bramka przyjmuje odpowiedź approve albo reject, nie {answer}."
     },
     "costs": {
@@ -880,6 +881,10 @@
                 "title": "Zatrzymany na kroku {node}",
                 "hint": "Usuń przyczynę błędu w worktree przebiegu, np. w terminalu, i wznów: run pójdzie dalej od tego kroku z tym, co zrobiły kroki przed nim. Poprawka na gałęzi bazowej tu nie trafi, a worktree odtworzony z gałęzi przebiegu nie ma plików spoza gita. Ponów zaczyna cały run od nowa.",
                 "action": "Wznów od tego kroku"
+            },
+            "chat": {
+                "replyHint": "Kontynuuj: co ma zrobić kolejny run tego workflowu?",
+                "busy": "Run jeszcze trwa; kontynuujesz, gdy się zakończy."
             },
             "flow": "Przebieg",
             "started": "Uruchomiony {when}",

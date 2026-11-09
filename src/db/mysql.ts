@@ -1114,8 +1114,18 @@ export class MysqlDatabase implements Database {
         retryOf: string | null = null,
         input: string | null = null,
         parentRun: string | null = null,
+        thread: string | null = null,
     ): Promise<WorkflowRun> {
-        return this.insertRun(this.pool, workflow, automation, author, retryOf, input, parentRun);
+        return this.insertRun(
+            this.pool,
+            workflow,
+            automation,
+            author,
+            retryOf,
+            input,
+            parentRun,
+            thread,
+        );
     }
 
     private async insertRun(
@@ -1126,14 +1136,15 @@ export class MysqlDatabase implements Database {
         retryOf: string | null = null,
         input: string | null = null,
         parentRun: string | null = null,
+        thread: string | null = null,
     ): Promise<WorkflowRun> {
         const id = newId();
         const now = new Date().toISOString();
         await exec(
             c,
             "INSERT INTO workflow_runs (id, workflow, name, repo, definition, automation, " +
-                "author, retry_of, input, parent_run, status, created_at, updated_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)",
+                "author, retry_of, input, parent_run, thread, status, created_at, updated_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)",
             [
                 id,
                 workflow.id,
@@ -1145,6 +1156,7 @@ export class MysqlDatabase implements Database {
                 retryOf,
                 input,
                 parentRun,
+                thread,
                 now,
                 now,
             ],
@@ -1159,6 +1171,12 @@ export class MysqlDatabase implements Database {
 
     async run(id: string): Promise<WorkflowRun | undefined> {
         return this.readRun(this.pool, id);
+    }
+
+    async threadRuns(thread: string): Promise<WorkflowRun[]> {
+        const sql =
+            "SELECT * FROM workflow_runs WHERE id = ? OR thread = ? ORDER BY created_at, id";
+        return (await all(this.pool, sql, [thread, thread])).map(toRun);
     }
 
     async runs(limit = 100): Promise<RunSummary[]> {

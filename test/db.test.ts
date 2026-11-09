@@ -389,7 +389,7 @@ mysqlTest("a new MySQL database is migrated once, a restart changes nothing", on
         const store = await Store.open({ home: home(), databaseUrl: url });
         assert.deepEqual(
             await store.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         await store.addRepo("acme/demo", "main");
         await store.addNotes("acme/demo", ["kept"], { task: null, run: null, node: null });
@@ -401,7 +401,7 @@ mysqlTest("a new MySQL database is migrated once, a restart changes nothing", on
         const again = await Store.open({ home: home(), databaseUrl: url });
         assert.deepEqual(
             await again.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
         );
         assert.deepEqual(await schemaOf(url), before);
         assert.deepEqual(
@@ -469,7 +469,7 @@ test("a database from before accounts gets them, its records keep no author", as
         try {
             assert.deepEqual(
                 await store.migrations(),
-                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
             );
             assert.equal(await store.hasUsers(), false);
             // Migration 9 names the repository by its name and keeps owner/name as GitHub.

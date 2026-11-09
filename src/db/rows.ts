@@ -288,6 +288,7 @@ export const toSummary = (r: Row): RunSummary => ({
     repo: r.repo as string,
     automation: r.automation ?? null,
     retryOf: r.retry_of ?? null,
+    thread: r.thread ?? null,
     input: r.input ?? null,
     parentRun: r.parent_run ?? null,
     status: r.status as RunStatus,
