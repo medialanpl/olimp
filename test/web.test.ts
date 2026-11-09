@@ -76,7 +76,7 @@ test("the panel's index.html is served at / and never cached", async () => {
     const csp = String(index.headers["content-security-policy"]);
     assert.match(csp, /default-src 'self'/);
     // Images from nowhere but the panel and GitHub's avatar host.
-    assert.match(csp, /img-src 'self' data: https:\/\/avatars\.githubusercontent\.com;/);
+    assert.match(csp, /img-src 'self' data: blob: https:\/\/avatars\.githubusercontent\.com;/);
     assert.equal(index.headers["x-content-type-options"], "nosniff");
 });
 
