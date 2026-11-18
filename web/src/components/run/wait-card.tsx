@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
+import { Markdown } from "@/components/markdown";
 import { FormError } from "@/components/page";
 import { ChildLink } from "@/components/run/steps";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export function WaitCard({ run, wait }: { run: WorkflowRun; wait: RunWait }) {
             {wait.kind === "gate" ? (
                 <>
                     {head(<HandIcon />, t("runs.wait.gate"))}
-                    <p className="whitespace-pre-wrap break-words text-sm">{wait.question}</p>
+                    {wait.question ? <Markdown>{wait.question}</Markdown> : null}
                     <Textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
@@ -102,7 +103,7 @@ export function WaitCard({ run, wait }: { run: WorkflowRun; wait: RunWait }) {
             ) : wait.kind === "ask" ? (
                 <>
                     {head(<MessageCircleQuestionIcon />, t("runs.wait.ask"))}
-                    <p className="whitespace-pre-wrap break-words text-sm">{wait.question}</p>
+                    {wait.question ? <Markdown>{wait.question}</Markdown> : null}
                     {wait.options?.length ? (
                         <div className="flex flex-wrap gap-2">
                             {wait.options.map((option) => (
