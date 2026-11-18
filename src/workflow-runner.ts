@@ -51,6 +51,7 @@ import {
     commentPr,
     commit,
     evaluate,
+    mailNode,
     markedIssue,
     type NodeResult,
     type NodeSite,
@@ -449,6 +450,13 @@ async function execute(walk: Walk, node: GraphNode, step: Step): Promise<Outcome
                 run: { id: wr.id, name: wr.name, status: "running", prUrl: await prUrl() },
                 node: node.id,
             });
+        case "notify.mail":
+            return mailNode(
+                walk.cfg,
+                node.to,
+                text(walk, node.subject ?? wr.name),
+                text(walk, node.body),
+            );
         default:
             return { port: "failed", log: "", error: `a ${node.type} node cannot run by itself` };
     }

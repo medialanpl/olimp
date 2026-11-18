@@ -562,6 +562,7 @@ curl -s localhost:4850/api/workflow-runs/<run id>
 | `github.pr-comment`, `github.issue-comment` | `body`; `issue?` for an issue, else the one an agent named with `OLIMP:ISSUE <n>` | `done`, `failed` |
 | `github.wait-ci` | `timeoutMs`, `pollMs`; only the checks of the worktree's commit count, and a conflicting pull request ends on `red` at once | `green`, `red`, `timeout`, `failed` |
 | `notify.webhook` | `url` (HTTPS, or `${SECRET}` of the project), `body?` | `done`, `failed` |
+| `notify.mail` | `to` (up to 10 addresses, comma separated), `subject?` (the run's name by default), `body`; sent through OLIMP's mail server (Settings, or `OLIMP_SMTP_URL`), a blank line starts a paragraph and links are clickable | `done`, `failed` |
 
 `{{task}}` in a text field is the run's request and `{{nodes.<id>.<output>}}` an earlier node's
 output (an agent's `summary`, `verdict`, `status`; a check's `exitCode` and `output`; a gate's

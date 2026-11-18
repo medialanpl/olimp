@@ -48,7 +48,7 @@ function NodeItem({ choice, onPick }: { choice: NodeChoice; onPick: () => void }
 
 const AGENTS: NodeType[] = ["agent", "ask-user", "dispatch"];
 const FLOW: NodeType[] = ["if", "loop", "gate.human", "fork", "workflow"];
-const SCRIPTS: NodeType[] = ["check", "notify.webhook"];
+const SCRIPTS: NodeType[] = ["check", "notify.webhook", "notify.mail"];
 const GIT: NodeType[] = [
     "git.commit",
     "git.push",

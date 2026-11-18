@@ -22,7 +22,7 @@ import {
     PrUpdateFields,
     WaitCiFields,
 } from "@/components/flow/inspector/git";
-import { CheckFields, WebhookFields } from "@/components/flow/inspector/scripts";
+import { CheckFields, MailFields, WebhookFields } from "@/components/flow/inspector/scripts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -164,6 +164,9 @@ export function NodeInspector({
             break;
         case "notify.webhook":
             fields = <WebhookFields {...props} node={node} />;
+            break;
+        case "notify.mail":
+            fields = <MailFields {...props} node={node} />;
             break;
         default:
             fields = (

@@ -89,7 +89,7 @@
   validation, the walk through ports and loops, templates, the layout, import of older workflow files and
   the built-in templates.
 - `src/workflows.ts`: the field validation of a definition on save.
-- `src/workflow-nodes.ts`: what the check, if, git and GitHub nodes and the webhook node do.
+- `src/workflow-nodes.ts`: what the check, if, git and GitHub nodes and the webhook and mail nodes do.
 - `src/workflow-builder.ts`: a workflow planned by the project's agent from a description.
 - `src/skills.ts`: skills repositories: registration and removal, the skill list read from the
   clone, resolving a skill name, and copying a skill into a task's worktree.
@@ -1343,6 +1343,7 @@ running jobs interrupted.
 | A workflow's `check` runs any shell command | The maintainer's decision: whoever may edit workflows (any account, repositories being shared) runs code as the OLIMP user, with the project's secrets in its environment and without OLIMP's variables; the same reach as an agent without a sandbox. The command is stored in plain text in the definition | per-repository access, commands limited to the repository's list |
 | A project's webhooks send job titles, errors and a waiting run's question out | Only an admin adds a receiver; HTTPS only, no redirects, 10 seconds. The address and an ntfy token are sealed with `OLIMP_HOME/auth.key`; the API shows only the host and whether a token is set. A public ntfy topic is readable by anyone who knows its name, so the panel says to pick a hard-to-guess one; a protected topic takes a token | |
 | A workflow's `notify.webhook` calls out | Only HTTPS, no redirects, 15 seconds; a secret address goes in as `${NAME}` of a project secret, filled in only when the node runs, so it stays out of the definition | |
+| A workflow's `notify.mail` sends mail through OLIMP's server | Whoever edits a workflow already runs shell commands as OLIMP (check nodes), so the node adds no privilege; at most 10 addresses, checked when the workflow is saved, and mail headers go through nodemailer | |
 | A user-given text matched against agent output | An `if` on an output compares as a number or a plain string (`contains` is a substring test), never a regular expression: a pattern from the API on agent output in the API process could hang the server (ReDoS); globs are compiled from `*`, `**` and `?` only | |
 | A failed agent step whose half-done changes reach a PR | A failed step leaves by `failed`, which ends the run as failed unless the definition wires it, so a PR after a failure is always a choice in the definition | |
 | Anyone who can reach the API can run agents | API bound to 127.0.0.1; `Host` must be a loopback name (DNS rebinding); a cross-origin `Origin` is refused and writes (also `PATCH` and `DELETE`) need `application/json` (web pages cannot post). With accounts every request but `/health` needs a token, also from loopback. Until the first account exists anyone on the machine may create it, as the API already trusted loopback | |

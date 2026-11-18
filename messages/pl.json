@@ -2291,7 +2291,13 @@
                 "ciPoll": "Sprawdzaj co (s)",
                 "url": "Adres",
                 "urlHint": "HTTPS albo $'{NAME}' dla sekretu projektu, żeby adresu nie było w workflow.",
-                "webhookBody": "Tekst"
+                "webhookBody": "Tekst",
+                "to": "Do",
+                "toHint": "Adresy oddzielone przecinkami, najwyżej 10.",
+                "subject": "Temat",
+                "subjectHint": "Puste: nazwa workflow. Działają też '{{task}}' i '{{nodes.ID.WYJŚCIE}}'.",
+                "mailBody": "Wiadomość",
+                "mailBodyHint": "Pusta linia zaczyna akapit, a linki są klikalne; '{{nodes.ID.summary}}' wstawia podsumowanie agenta."
             },
             "op": {
                 "equals": "Równa się",
@@ -2383,6 +2389,10 @@
                 "notifyWebhook": {
                     "label": "Webhook",
                     "description": "Wysyła wiadomość JSON metodą POST na adres HTTPS."
+                },
+                "notifyMail": {
+                    "label": "E-mail",
+                    "description": "Wysyła e-mail przez serwer poczty OLIMP-a."
                 }
             },
             "port": {

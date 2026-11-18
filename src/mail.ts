@@ -18,10 +18,23 @@ export interface Mail {
 
 const escapeHtml = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+const URL_IN_TEXT = /https?:\/\/[^\s<>"']*[^\s<>"'.,;:!?)]/g;
+
+function linked(text: string): string {
+    let out = "";
+    let at = 0;
+    for (const match of text.matchAll(URL_IN_TEXT)) {
+        const url = escapeHtml(match[0]);
+        out += `${escapeHtml(text.slice(at, match.index))}<a href="${url}">${url}</a>`;
+        at = match.index + match[0].length;
+    }
+    return out + escapeHtml(text.slice(at));
+}
+
 // One plain layout for every message, as Corivo's base layout without the brand images.
 function html(mail: Mail): string {
     const p = (text: string) =>
-        `<p style="margin:0 0 16px;font:15px/1.5 Inter,Arial,sans-serif;color:#1c1917">${escapeHtml(text)}</p>`;
+        `<p style="margin:0 0 16px;font:15px/1.5 Inter,Arial,sans-serif;color:#1c1917;white-space:pre-line">${linked(text)}</p>`;
     return [
         '<div style="max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff">',
         '<p style="margin:0 0 24px;font:600 18px Inter,Arial,sans-serif;letter-spacing:.08em">OLIMP</p>',

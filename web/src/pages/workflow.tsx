@@ -183,6 +183,8 @@ export function useNodeSummary() {
                 );
             case "notify.webhook":
                 return mono(node.url || t("flow.field.url"));
+            case "notify.mail":
+                return mono(node.to || t("flow.field.to"));
             default:
                 return null;
         }

@@ -46,6 +46,7 @@ import {
     chain,
     commitFiles,
     fakeGh,
+    fakeSmtp,
     ghFiles,
     openStore,
     ref,
@@ -1539,6 +1540,39 @@ test("a dispatch node and a sub-workflow node wait for the job they start", asyn
     assert.equal(done.status, "done", done.error ?? "");
     assert.equal(done.state?.outputs.child?.status, "done");
     assert.equal(done.state?.outputs.child?.taskId, subtask.id);
+});
+
+test("a mail node sends an agent's summary with clickable links, and fails without a server", async () => {
+    const definition = chain(step("report", "Report"), {
+        id: "mail",
+        type: "notify.mail",
+        to: "ann@example.com,ben@example.com",
+        body: "Found: {{nodes.report.summary}}\nhttps://example.com/jobs/1?a=1&b=2.\n\nBye",
+    });
+    const smtp = await fakeSmtp();
+    try {
+        const { cfg, store, queued } = await setupRun(definition);
+        await runWorkflow(
+            store,
+            { ...cfg, smtpUrl: smtp.url, mailFrom: "olimp@example.com" },
+            queued,
+        );
+        const done = await again(store, queued.id);
+        assert.equal(done.status, "done", done.error ?? "");
+        assert.equal(done.steps.at(-1)?.log, "mailed ann@example.com, ben@example.com");
+        const sent = smtp.messages.at(-1) ?? "";
+        assert.match(sent, /To: ann@example\.com, ben@example\.com/);
+        assert.match(sent, /Subject: Flow/);
+        assert.match(sent, /Found: idle\r\nhttps:\/\/example\.com\/jobs\/1\?a=1&b=2\./);
+        assert.match(sent, /<a href="https:\/\/example\.com\/jobs\/1\?a=1&#38;b=2">/);
+    } finally {
+        smtp.close();
+    }
+    const unset = await setupRun(definition);
+    await runWorkflow(unset.store, unset.cfg, unset.queued);
+    const failed = await again(unset.store, unset.queued.id);
+    assert.equal(failed.status, "failed");
+    assert.match(failed.steps.at(-1)?.error ?? "", /^mail failed: OLIMP_SMTP_URL/);
 });
 
 test("commit and push nodes commit with their message and push the run's branch", async () => {

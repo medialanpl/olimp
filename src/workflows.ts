@@ -1,4 +1,5 @@
 import { type AgentName, isAgent } from "./agents.ts";
+import { EMAIL } from "./auth.ts";
 import type { MessageKey, Params } from "./i18n.ts";
 import { parseNames } from "./integrations.ts";
 import {
@@ -35,6 +36,7 @@ import {
 export type { Definition, GraphNode, NodeType } from "./workflow-graph.ts";
 
 const URL_MAX = 2000;
+const RECIPIENTS_MAX = 10;
 const LIST_MAX = 20;
 const BUDGET_MAX = 1000;
 
@@ -326,6 +328,19 @@ function parseNode(raw: unknown): GraphNode {
                 type: "notify.webhook",
                 url,
                 body: r.text("body", TASK_BODY_MAX),
+            });
+        }
+        case "notify.mail": {
+            const to = r.text("to", URL_MAX, { required: true }) as string;
+            const addresses = to.split(",").map((a) => a.trim());
+            if (addresses.length > RECIPIENTS_MAX || !addresses.every((a) => EMAIL.test(a)))
+                return r.fail("to");
+            return compact({
+                ...base,
+                type: "notify.mail",
+                to: addresses.join(", "),
+                subject: r.text("subject", TITLE_MAX),
+                body: r.text("body", TASK_BODY_MAX, { required: true }) as string,
             });
         }
         default:

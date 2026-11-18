@@ -5,6 +5,7 @@ import { pushRemote } from "./clones.ts";
 import type { Config } from "./config.ts";
 import { checkOf, type GhCheck } from "./github.ts";
 import { expand } from "./integrations.ts";
+import { sendMail } from "./mail.ts";
 import { must, run, stream } from "./proc.ts";
 import { isOlimpVariable } from "./sandbox.ts";
 import type { Repo } from "./store.ts";
@@ -410,5 +411,20 @@ export async function sendWebhook(
             : { ...failed(`webhook answered ${response.status}`), outputs };
     } catch (error) {
         return failed(`webhook failed: ${(error as Error).message}`);
+    }
+}
+
+export async function mailNode(
+    cfg: Config,
+    to: string,
+    subject: string,
+    body: string,
+): Promise<NodeResult> {
+    try {
+        const paragraphs = body.split(/\n[ \t]*\n/).map((p) => p.trim());
+        await sendMail(cfg, { to, subject, paragraphs: paragraphs.filter(Boolean) });
+        return { port: "done", log: `mailed ${to}` };
+    } catch (error) {
+        return failed(`mail failed: ${(error as Error).message}`);
     }
 }

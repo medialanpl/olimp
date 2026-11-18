@@ -96,6 +96,7 @@ test("a malformed definition, node or field is refused with its code", () => {
         "options",
     );
     field({ type: "notify.webhook", url: "http://example.com" }, "url");
+    field({ type: "notify.mail", to: "ann@example.com, nobody", body: "hi" }, "to");
     field(
         { type: "if", condition: { kind: "output", ref: "nodot", op: "equals", value: 1 } },
         "condition",

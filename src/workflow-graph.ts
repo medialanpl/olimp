@@ -11,7 +11,7 @@ export const WAIT_MIN_MS = 60_000;
 export const WAIT_MAX_MS = 7 * 24 * 60 * 60_000;
 export const POLL_MIN_MS = 10_000;
 export const POLL_MAX_MS = 30 * 60_000;
-export const SUMMARY_MAX = 4000;
+export const SUMMARY_MAX = 20_000;
 export const CHECK_OUTPUT_MAX = 20_000;
 
 export const NODE_ID = /^[A-Za-z\d][\w-]{0,49}$/;
@@ -56,6 +56,7 @@ const SPECS = {
     "ask-user": ["agents", "answered", "answer"],
     check: ["scripts", "pass fail", "exitCode output"],
     "notify.webhook": ["scripts", "done failed", "status"],
+    "notify.mail": ["scripts", "done failed"],
     "git.commit": ["git", "done nothing failed", "sha"],
     "git.push": ["git", "done failed"],
     "git.sync-base": ["git", "done conflict failed", "conflicts"],
@@ -201,6 +202,15 @@ export interface WebhookNode extends Base {
     body?: string;
 }
 
+export interface MailNode extends Base {
+    type: "notify.mail";
+    // Addresses separated by commas.
+    to: string;
+    // None: the run's name.
+    subject?: string;
+    body: string;
+}
+
 export type GraphNode =
     | StartNode
     | EndNode
@@ -222,7 +232,8 @@ export type GraphNode =
     | PrCommentNode
     | IssueCommentNode
     | WaitCiNode
-    | WebhookNode;
+    | WebhookNode
+    | MailNode;
 
 export type NodeOf<T extends NodeType> = Extract<GraphNode, { type: T }>;
 
@@ -309,6 +320,7 @@ const TEXT_FIELDS: Partial<Record<NodeType, string[]>> = {
     "github.pr-comment": ["body"],
     "github.issue-comment": ["body"],
     "notify.webhook": ["url", "body"],
+    "notify.mail": ["subject", "body"],
 };
 
 // The fields a run renders, so the ones that may hold placeholders.
@@ -394,6 +406,8 @@ function missingField(node: GraphNode): string | null {
             return node.workflow ? null : "workflow";
         case "github.pr-update":
             return node.ready || node.addLabels?.length || node.reviewers?.length ? null : "ready";
+        case "notify.mail":
+            return !filled(node.to) ? "to" : !filled(node.body) ? "body" : null;
         case "if": {
             const condition = node.condition;
             if (condition.kind === "paths-changed") return filled(condition.glob) ? null : "glob";

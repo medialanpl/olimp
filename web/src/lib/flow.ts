@@ -74,7 +74,8 @@ export type NodeKey =
     | "githubPrComment"
     | "githubIssueComment"
     | "githubWaitCi"
-    | "notifyWebhook";
+    | "notifyWebhook"
+    | "notifyMail";
 
 const DEFAULTS: { [T in NodeType]: Omit<Extract<GraphNode, { type: T }>, "id" | "type"> } = {
     start: {},
@@ -98,6 +99,7 @@ const DEFAULTS: { [T in NodeType]: Omit<Extract<GraphNode, { type: T }>, "id" | 
     "github.issue-comment": { body: "OLIMP: {{task}}" },
     "github.wait-ci": { timeoutMs: 60 * 60_000, pollMs: 60_000 },
     "notify.webhook": { url: "", body: "OLIMP: {{task}}" },
+    "notify.mail": { to: "", body: "{{task}}" },
 };
 
 const ID_BASE: Partial<Record<NodeType, string>> = {
@@ -112,6 +114,7 @@ const ID_BASE: Partial<Record<NodeType, string>> = {
     "github.issue-comment": "issue-comment",
     "github.wait-ci": "wait-ci",
     "notify.webhook": "webhook",
+    "notify.mail": "mail",
 };
 
 export function freshId(def: Pick<Definition, "nodes">, base: string): string {

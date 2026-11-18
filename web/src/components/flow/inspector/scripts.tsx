@@ -54,3 +54,29 @@ export function WebhookFields(p: NodeFieldsProps<"notify.webhook">) {
         </>
     );
 }
+
+export function MailFields(p: NodeFieldsProps<"notify.mail">) {
+    const { node, field } = p;
+    const t = useTranslations("web");
+    return (
+        <>
+            <Field id={field("to")} label={t("flow.field.to")} hint={t("flow.field.toHint")}>
+                <TextField {...p} name="to" value={node.to} />
+            </Field>
+            <Field
+                id={field("subject")}
+                label={t("flow.field.subject")}
+                hint={t("flow.field.subjectHint")}
+            >
+                <TextField {...p} name="subject" value={node.subject} />
+            </Field>
+            <Field
+                id={field("body")}
+                label={t("flow.field.mailBody")}
+                hint={t("flow.field.mailBodyHint")}
+            >
+                <TextField {...p} name="body" value={node.body} rows={6} />
+            </Field>
+        </>
+    );
+}

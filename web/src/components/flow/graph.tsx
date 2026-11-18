@@ -12,6 +12,7 @@ import {
     HandIcon,
     ListChecksIcon,
     type LucideIcon,
+    MailIcon,
     MessageCircleQuestionIcon,
     MessageSquareTextIcon,
     PlayIcon,
@@ -74,6 +75,7 @@ export const NODE_ICON: Record<NodeType, LucideIcon> = {
     "github.issue-comment": CircleDotIcon,
     "github.wait-ci": TimerIcon,
     "notify.webhook": WebhookIcon,
+    "notify.mail": MailIcon,
 };
 
 export const KNOWN_PORTS = new Set([

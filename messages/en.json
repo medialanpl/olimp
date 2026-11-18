@@ -2291,7 +2291,13 @@
                 "ciPoll": "Check every (s)",
                 "url": "Address",
                 "urlHint": "HTTPS, or $'{NAME}' for a secret of the project, so the address stays out of the workflow.",
-                "webhookBody": "Text"
+                "webhookBody": "Text",
+                "to": "To",
+                "toHint": "Addresses separated by commas, up to 10.",
+                "subject": "Subject",
+                "subjectHint": "Empty: the workflow's name. '{{task}}' and '{{nodes.ID.OUTPUT}}' work here too.",
+                "mailBody": "Message",
+                "mailBodyHint": "A blank line starts a paragraph and links stay clickable; '{{nodes.ID.summary}}' puts in an agent's summary."
             },
             "op": {
                 "equals": "Equals",
@@ -2383,6 +2389,10 @@
                 "notifyWebhook": {
                     "label": "Webhook",
                     "description": "POSTs a JSON message to an HTTPS address."
+                },
+                "notifyMail": {
+                    "label": "E-mail",
+                    "description": "Sends an e-mail through OLIMP's mail server."
                 }
             },
             "port": {

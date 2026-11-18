@@ -36,6 +36,8 @@ const NODE_GUIDE = [
         "reviewers?}, github.pr-comment {body} and github.issue-comment {issue?, body} → done, failed. " +
         "github.wait-ci {timeoutMs, pollMs} → green, red, timeout, failed",
     `notify.webhook {url: HTTPS or \${SECRET}, body?} → done, failed. Sends a JSON POST`,
+    "notify.mail {to: addresses separated by commas, subject?, body} → done, failed. Sends an " +
+        "e-mail through OLIMP's mail server; blank lines split paragraphs and links stay clickable",
 ].join(". ");
 
 // Only id, type and name are checked here; the API reads and validates the other fields.
