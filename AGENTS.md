@@ -56,6 +56,10 @@ use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it 
   start, before the session decides between the sign-in and the panel.
 - A hint or a notice in the panel (what a setting does, what happened after an action) is an
   `Alert variant="info"`, never a grey box; `warning` and `destructive` for what needs attention.
+- A table in the panel is a `DataTable` (`web/src/components/ui/data-table.tsx`) as on the tasks
+  page: headers from `fields.*` through `ColumnHead`, search, columns and pagination labelled by
+  `useTableLabels` (`web/src/components/table-labels.tsx`), a click on the row opens its page, the
+  row's actions in `DataTableRowActions`, and a `TableSkeleton` while it loads.
 - New logic gets a test; the run pipeline is tested end to end with a local bare repository and
   fake `claude`, `codex` and `gh` (`test/flow.test.ts`).
 - pnpm only. A new dependency is a question for the maintainer, not a decision.

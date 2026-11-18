@@ -27,10 +27,10 @@ import { FacetedFilter } from "@/components/faceted-filter";
 import { ErrorState, Loading, PageHeader } from "@/components/page";
 import { TableSkeleton } from "@/components/skeletons";
 import { StatusBadge } from "@/components/status-badge";
+import { ColumnHead, useTableLabels } from "@/components/table-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
-import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import type { DataTableColumnDef, DataTableFeatures } from "@/components/ui/data-table-features";
 import { DataTableRowActions } from "@/components/ui/data-table-row-actions";
 import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -159,19 +159,7 @@ function Head<TValue extends CellData>({
     end?: boolean;
 }) {
     const t = useTranslations("web");
-    return (
-        <DataTableColumnHeader
-            column={column}
-            title={t(`fields.${name}`)}
-            labels={{
-                asc: t("table.asc"),
-                desc: t("table.desc"),
-                clearSort: t("table.clearSort"),
-                hide: t("table.hide"),
-            }}
-            className={end ? "justify-end" : undefined}
-        />
-    );
+    return <ColumnHead column={column} title={t(`fields.${name}`)} end={end} />;
 }
 
 // flexRender mounts `cell` as a component, so the columns keep one identity and reach live state
@@ -431,6 +419,7 @@ const COLUMNS: DataTableColumnDef<Row>[] = [
 
 export function TasksPage() {
     const t = useTranslations("web");
+    const tableLabels = useTableLabels();
     const me = useMe();
     const [params, setParams] = useSearchParams();
     const project = useParams().id;
@@ -635,21 +624,7 @@ export function TasksPage() {
                     labels={{
                         empty: t("tasks.emptyFiltered"),
                         search: t("tasks.search"),
-                        columns: {
-                            columns: t("table.columns"),
-                            search: t("table.columnsSearch"),
-                            empty: t("table.noResults"),
-                            reset: t("table.reset"),
-                        },
-                        pagination: {
-                            rowsPerPage: t("table.rowsPerPage"),
-                            page: t("table.page"),
-                            of: t("table.of"),
-                            firstPage: t("table.firstPage"),
-                            previousPage: t("table.previousPage"),
-                            nextPage: t("table.nextPage"),
-                            lastPage: t("table.lastPage"),
-                        },
+                        ...tableLabels,
                     }}
                     searchColumn="search"
                     columnLabels={Object.fromEntries(

@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { CellData, Column } from "@tanstack/react-table";
 import {
     ChevronDownIcon,
     CopyIcon,
     DownloadIcon,
-    EllipsisIcon,
     FileUpIcon,
     LayoutTemplateIcon,
     PencilIcon,
@@ -12,24 +12,19 @@ import {
     Trash2Icon,
     WorkflowIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { createContext, useContext, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useTranslations } from "use-intl";
 import { EmptyState } from "@/components/empty-state";
 import { NODE_ICON, toneOf, useNodeTitle } from "@/components/flow/graph";
 import { ErrorState, FormError, Loading, PageHeader } from "@/components/page";
-import { times } from "@/components/skeletons";
+import { TableSkeleton } from "@/components/skeletons";
 import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
+import { ColumnHead, useTableLabels } from "@/components/table-labels";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
+import type { DataTableColumnDef, DataTableFeatures } from "@/components/ui/data-table-features";
+import { DataTableRowActions } from "@/components/ui/data-table-row-actions";
 import {
     Dialog,
     DialogBody,
@@ -47,7 +42,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
 import { download, executable, fromText, TEMPLATES, toYaml } from "@/lib/flow";
@@ -96,150 +90,211 @@ function NodeStrip({ workflow }: { workflow: Workflow }) {
     );
 }
 
-function WorkflowCard({ workflow, lastRun }: { workflow: Workflow; lastRun?: RunSummary }) {
+type Row = Workflow & { steps: number; lastRun: RunSummary | undefined };
+
+const COLUMN_NAMES = ["workflow", "steps", "project", "lastRun", "updated"] as const;
+const hrefOf = (row: Row) => `/workflows/${row.id}`;
+
+// The dialogs live on the page, so a click inside one never reaches the row under it.
+const RowContext = createContext<{ run: (row: Row) => void; remove: (row: Row) => void }>({
+    run: () => {},
+    remove: () => {},
+});
+
+function NameCell({ row }: { row: Row }) {
+    return (
+        <div className="max-w-[32rem] min-w-48">
+            <Link
+                to={hrefOf(row)}
+                className="block truncate font-medium hover:underline"
+                title={row.name}
+            >
+                {row.name}
+            </Link>
+            {row.description && (
+                <p className="truncate text-xs text-muted-foreground" title={row.description}>
+                    {row.description}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function LastRunCell({ row }: { row: Row }) {
     const t = useTranslations("web");
     const format = useFormat();
+    if (!row.lastRun)
+        return <span className="text-xs text-muted-foreground">{t("workflows.neverRun")}</span>;
+    return (
+        <Link
+            to={`/tasks/${row.lastRun.id}`}
+            className="inline-flex items-center gap-2 hover:underline"
+        >
+            <StatusBadge status={row.lastRun.status} />
+            <span className="text-xs text-muted-foreground">
+                {format.relative(row.lastRun.createdAt)}
+            </span>
+        </Link>
+    );
+}
+
+function UpdatedCell({ row }: { row: Row }) {
+    const format = useFormat();
+    return (
+        <div
+            className="text-right text-muted-foreground tabular-nums"
+            title={format.dateTime(row.updatedAt)}
+        >
+            {format.relative(row.updatedAt)}
+        </div>
+    );
+}
+
+function ActionsCell({ row }: { row: Row }) {
+    const t = useTranslations("web");
     const navigate = useNavigate();
+    const { run, remove } = useContext(RowContext);
+    return (
+        <DataTableRowActions label={t("workflows.actions", { name: row.name })}>
+            <DropdownMenuItem onSelect={() => run(row)}>
+                <PlayIcon />
+                {t("workflows.run")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => navigate(hrefOf(row))}>
+                <PencilIcon />
+                {t("workflows.edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+                onSelect={() =>
+                    navigate("/workflows/new", {
+                        state: {
+                            draft: {
+                                name: t("workflows.copyName", { name: row.name }),
+                                description: row.description,
+                                repo: row.repo,
+                                definition: row.definition,
+                            },
+                        },
+                    })
+                }
+            >
+                <CopyIcon />
+                {t("workflows.duplicate")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => download(row.name, toYaml(row))}>
+                <DownloadIcon />
+                {t("workflows.export")}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => remove(row)}>
+                <Trash2Icon />
+                {t("workflows.delete")}
+            </DropdownMenuItem>
+        </DataTableRowActions>
+    );
+}
+
+function Head<TValue extends CellData>({
+    column,
+    name,
+    end,
+}: {
+    column: Column<DataTableFeatures, Row, TValue>;
+    name: (typeof COLUMN_NAMES)[number];
+    end?: boolean;
+}) {
+    const t = useTranslations("web");
+    return <ColumnHead column={column} title={t(`fields.${name}`)} end={end} />;
+}
+
+const COLUMNS: DataTableColumnDef<Row>[] = [
+    {
+        id: "search",
+        accessorFn: (r) => `${r.name} ${r.description} ${r.repo} ${r.id}`,
+        enableHiding: false,
+    },
+    {
+        id: "workflow",
+        accessorKey: "name",
+        enableHiding: false,
+        header: ({ column }) => <Head column={column} name="workflow" />,
+        cell: ({ row }) => <NameCell row={row.original} />,
+    },
+    {
+        id: "steps",
+        accessorKey: "steps",
+        header: ({ column }) => <Head column={column} name="steps" />,
+        cell: ({ row }) => <NodeStrip workflow={row.original} />,
+    },
+    {
+        id: "project",
+        accessorKey: "repo",
+        header: ({ column }) => <Head column={column} name="project" />,
+        cell: ({ row }) => <code className="font-mono text-xs">{row.original.repo}</code>,
+    },
+    {
+        id: "lastRun",
+        accessorFn: (r) => r.lastRun?.createdAt ?? "",
+        header: ({ column }) => <Head column={column} name="lastRun" />,
+        cell: ({ row }) => <LastRunCell row={row.original} />,
+    },
+    {
+        id: "updated",
+        accessorKey: "updatedAt",
+        header: ({ column }) => <Head column={column} name="updated" end />,
+        cell: ({ row }) => <UpdatedCell row={row.original} />,
+    },
+    {
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => <ActionsCell row={row.original} />,
+    },
+];
+
+function DeleteDialog({ row, onClose }: { row: Row | null; onClose: () => void }) {
+    const t = useTranslations("web");
     const client = useQueryClient();
-    const [running, setRunning] = useState(false);
-    const [deleting, setDeleting] = useState(false);
     const remove = useMutation({
-        mutationFn: () => api(`/api/workflows/${workflow.id}`, { method: "DELETE" }),
+        mutationFn: (id: string) => api(`/api/workflows/${id}`, { method: "DELETE" }),
         onSuccess: () => {
-            setDeleting(false);
+            onClose();
             void client.invalidateQueries({ queryKey: keys.workflows });
         },
     });
-    const steps = workflow.definition.nodes.filter(executable).length;
     return (
-        <Card className="relative transition-shadow hover:shadow-md">
-            <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 space-y-1">
-                        <CardTitle className="truncate">
-                            <Link
-                                to={`/workflows/${workflow.id}`}
-                                className="outline-none after:absolute after:inset-0 hover:underline focus-visible:underline"
-                            >
-                                {workflow.name}
-                            </Link>
-                        </CardTitle>
-                        <CardDescription className="line-clamp-2 min-h-10">
-                            {workflow.description || t("workflows.noDescription")}
-                        </CardDescription>
-                    </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                size="icon-sm"
-                                variant="ghost"
-                                aria-label={t("workflows.more")}
-                                className="relative z-10 -mt-1 -mr-2"
-                            >
-                                <EllipsisIcon />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                                onSelect={() => navigate(`/workflows/${workflow.id}`)}
-                            >
-                                <PencilIcon />
-                                {t("workflows.edit")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onSelect={() =>
-                                    navigate("/workflows/new", {
-                                        state: {
-                                            draft: {
-                                                name: t("workflows.copyName", {
-                                                    name: workflow.name,
-                                                }),
-                                                description: workflow.description,
-                                                repo: workflow.repo,
-                                                definition: workflow.definition,
-                                            },
-                                        },
-                                    })
-                                }
-                            >
-                                <CopyIcon />
-                                {t("workflows.duplicate")}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onSelect={() => download(workflow.name, toYaml(workflow))}
-                            >
-                                <DownloadIcon />
-                                {t("workflows.export")}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onSelect={() => setDeleting(true)}
-                            >
-                                <Trash2Icon />
-                                {t("workflows.delete")}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                <NodeStrip workflow={workflow} />
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <Badge variant="outline" className="font-mono">
-                        {workflow.repo}
-                    </Badge>
-                    <span>{t("workflows.steps", { count: steps })}</span>
-                    <span>
-                        {t("workflows.updated", { when: format.relative(workflow.updatedAt) })}
-                    </span>
-                </div>
-            </CardContent>
-            <CardFooter className="relative z-10 mt-auto flex items-center justify-between gap-2">
-                {lastRun ? (
-                    <Link
-                        to={`/tasks/${lastRun.id}`}
-                        className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+        <Dialog
+            open={row !== null}
+            onOpenChange={(open) => {
+                if (open) return;
+                remove.reset();
+                onClose();
+            }}
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>
+                        {t("workflows.deleteTitle", { name: row?.name ?? "" })}
+                    </DialogTitle>
+                    <DialogDescription>{t("workflows.deleteDescription")}</DialogDescription>
+                </DialogHeader>
+                <DialogBody>
+                    <FormError error={remove.error} />
+                </DialogBody>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>
+                        {t("common.cancel")}
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        disabled={remove.isPending || !row}
+                        onClick={() => row && remove.mutate(row.id)}
                     >
-                        <StatusBadge status={lastRun.status} />
-                        <span className="truncate">{format.relative(lastRun.createdAt)}</span>
-                    </Link>
-                ) : (
-                    <span className="text-xs text-muted-foreground">{t("workflows.neverRun")}</span>
-                )}
-                <Button size="sm" variant="outline" onClick={() => setRunning(true)}>
-                    <PlayIcon />
-                    {t("workflows.run")}
-                </Button>
-            </CardFooter>
-            <RunDialog workflow={workflow} open={running} onOpenChange={setRunning} />
-            <Dialog open={deleting} onOpenChange={setDeleting}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>
-                            {t("workflows.deleteTitle", { name: workflow.name })}
-                        </DialogTitle>
-                        <DialogDescription>{t("workflows.deleteDescription")}</DialogDescription>
-                    </DialogHeader>
-                    <DialogBody>
-                        <FormError error={remove.error} />
-                    </DialogBody>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setDeleting(false)}>
-                            {t("common.cancel")}
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            disabled={remove.isPending}
-                            onClick={() => remove.mutate()}
-                        >
-                            <Trash2Icon />
-                            {t("workflows.delete")}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </Card>
+                        <Trash2Icon />
+                        {t("workflows.delete")}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -335,45 +390,33 @@ function NewMenu({ repo }: { repo: string }) {
     );
 }
 
-function WorkflowCardSkeleton() {
-    return (
-        <Card>
-            <CardHeader className="space-y-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-10 w-full" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-                <div className="flex gap-1.5">
-                    {times(3).map((node) => (
-                        <Skeleton key={node} className="h-7 w-9 rounded-lg" />
-                    ))}
-                </div>
-                <div className="flex gap-3">
-                    <Skeleton className="h-5 w-24" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-24" />
-                </div>
-            </CardContent>
-            <CardFooter className="mt-auto justify-between gap-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-8 w-20 rounded-4xl" />
-            </CardFooter>
-        </Card>
-    );
-}
-
 export function WorkflowsPage() {
     const t = useTranslations("web");
+    const tableLabels = useTableLabels();
     const workflows = useWorkflows();
     const runs = useRuns();
     const repos = useRepos();
     const [params] = useSearchParams();
     const repo = params.get("repo") ?? "";
-    const shown = (workflows.data ?? []).filter((workflow) => !repo || workflow.repo === repo);
-    const lastRun = (id: string) => (runs.data ?? []).find((run) => run.workflow === id);
+    const [running, setRunning] = useState<Row | null>(null);
+    const [deleting, setDeleting] = useState<Row | null>(null);
+    const actions = useMemo(() => ({ run: setRunning, remove: setDeleting }), []);
+    const rows = useMemo(
+        () =>
+            (workflows.data ?? [])
+                .filter((workflow) => !repo || workflow.repo === repo)
+                .map(
+                    (workflow): Row => ({
+                        ...workflow,
+                        steps: workflow.definition.nodes.filter(executable).length,
+                        lastRun: (runs.data ?? []).find((run) => run.workflow === workflow.id),
+                    }),
+                ),
+        [workflows.data, runs.data, repo],
+    );
     const target = repo || repos.data?.[0]?.id || "";
     return (
-        <>
+        <RowContext.Provider value={actions}>
             <PageHeader
                 title={t("workflows.title")}
                 description={
@@ -382,14 +425,12 @@ export function WorkflowsPage() {
                 actions={<NewMenu repo={target} />}
             />
             {workflows.isPending ? (
-                <Loading className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {times(3).map((card) => (
-                        <WorkflowCardSkeleton key={card} />
-                    ))}
+                <Loading>
+                    <TableSkeleton columns={5} rows={5} />
                 </Loading>
             ) : workflows.isError ? (
                 <ErrorState error={workflows.error} onRetry={() => workflows.refetch()} />
-            ) : !shown.length ? (
+            ) : !rows.length ? (
                 <EmptyState
                     icon={<WorkflowIcon />}
                     title={t("workflows.emptyTitle")}
@@ -409,16 +450,35 @@ export function WorkflowsPage() {
                     </div>
                 </EmptyState>
             ) : (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {shown.map((workflow) => (
-                        <WorkflowCard
-                            key={workflow.id}
-                            workflow={workflow}
-                            lastRun={lastRun(workflow.id)}
-                        />
-                    ))}
-                </div>
+                <DataTable
+                    // The project column shows only on the list of all projects.
+                    key={repo}
+                    columns={COLUMNS}
+                    data={rows}
+                    labels={{
+                        empty: t("table.noResults"),
+                        search: t("workflows.search"),
+                        ...tableLabels,
+                    }}
+                    searchColumn="search"
+                    columnLabels={Object.fromEntries(
+                        COLUMN_NAMES.map((name) => [name, t(`fields.${name}`)]),
+                    )}
+                    getRowId={(row) => row.id}
+                    getRowHref={hrefOf}
+                    initialColumnVisibility={{ search: false, project: !repo }}
+                    initialPageSize={50}
+                    pageSizeOptions={[25, 50, 100]}
+                />
             )}
-        </>
+            {running && (
+                <RunDialog
+                    workflow={running}
+                    open
+                    onOpenChange={(open) => !open && setRunning(null)}
+                />
+            )}
+            <DeleteDialog row={deleting} onClose={() => setDeleting(null)} />
+        </RowContext.Provider>
     );
 }
