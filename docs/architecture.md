@@ -586,19 +586,22 @@ installation never falls back to no accounts by accident.
 on Corivo's. `POST /api/auth/login` checks the e-mail and an scrypt password hash (a missing
 account is checked against a throwaway hash, so the time does not tell), counts failures per
 e-mail and per address (3 in 5 minutes lock both, in memory, as in Corivo), and starts a session:
-a random cookie value whose SHA-256 is the `sessions` row. The second factor is mandatory and
-answered within 10 minutes: a TOTP code (RFC 6238, SHA-1, 6 digits, 30 s, one step either way, each
-step once per account) or a backup code (ten, single use, hashed) when the account set up an app;
-otherwise a 6-digit code e-mailed to it, stored hashed on the session, with at most 5 attempts.
-Without e-mail an account without the app sets it up right there (`two-factor/setup` and
-`enable`). Only then does the session sign anyone in. A session ends after 30 minutes without a
-request (`seen_at`, written at most once a minute) or 8 hours after the sign-in; sign-ins purge the
-old rows. The cookie is `HttpOnly; SameSite=Strict; Path=/` and `Secure` when the request came
+a random cookie value whose SHA-256 is the `sessions` row. The second factor is optional, chosen
+per account and answered within 10 minutes: a TOTP code (RFC 6238, SHA-1, 6 digits, 30 s, one step
+either way, each step once per account) or a backup code (ten, single use, hashed) when the account
+set up an app; a 6-digit code e-mailed to it, stored hashed on the session, with at most 5
+attempts, when it turned on e-mail codes (`users.email_codes`; the two exclude each other) and the
+mail server is set. Only then does the session sign anyone in; without a second factor (`method:
+null`) the password alone does. A new account has none; migration 24 kept e-mail codes for the
+accounts that had them while the second factor was mandatory. A session ends after 30 minutes
+without a request (`seen_at`, written at most once a minute) or 8 hours after the sign-in;
+sign-ins purge the old rows. The cookie is `HttpOnly; SameSite=Strict; Path=/` and `Secure` when the request came
 through `OLIMP_PUBLIC_HOST`; with `guard`'s origin and JSON checks a foreign page can neither read
 nor use it. The TOTP secret is encrypted (AES-256-GCM) with `OLIMP_HOME/auth.key` (mode 600, made
 on first use), so the database alone does not give it away. `/api/me/*` changes the caller's own
-name, e-mail (with the password), password (ending their other sessions), app and backup codes,
-and lists or ends sessions; these and the sign-in are REST only, since MCP signs in with a token.
+name, e-mail (with the password), password (ending their other sessions), second factor (the app
+and backup codes, `POST /api/me/two-factor/email` for e-mail codes, `DELETE /api/me/two-factor`
+to turn either off, each with the password), and lists or ends sessions; these and the sign-in are REST only, since MCP signs in with a token.
 Auth events (`auth.login`, `auth.denied`, `auth.rate_limited`, `auth.logout`, …) go to the log as
 one JSON line each.
 
@@ -610,7 +613,7 @@ account with an e-mail (`POST /api/users` with `email`, or `POST /api/users/:id/
 one-time link (`auth_links`, the hash of 32 random bytes, valid 7 days, replacing the account's
 earlier one) to `/accept-invitation`, or to `/reset-password` once the account has a password;
 `POST /api/auth/forgot` sends the reset for any address without telling whether it has an
-account. Setting the password ends the account's sessions. An admin resets a lost second factor
+account. Setting the password ends the account's sessions. An admin turns off a lost second factor
 (`DELETE /api/users/:id/two-factor`), which also signs the account out everywhere.
 
 **Tokens.** `olimp_` and 32 random bytes in base64url, shown once in the response that creates it
@@ -1135,8 +1138,8 @@ before and `/` answers `404 panel.notBuilt`, which says to run `pnpm build`.
 
 Signing in: on start the panel asks `GET /api/me`. `account.none` means OLIMP has no accounts and
 trusts loopback, so the panel opens without a sign-in; `401` shows the sign-in (e-mail and
-password, then the second factor; see [Accounts](#accounts)), with `/forgot-password`,
-`/reset-password` and `/accept-invitation` for the e-mail links. The session cookie is `HttpOnly`,
+password, then the second factor if the account has one; see [Accounts](#accounts)), with
+`/forgot-password`, `/reset-password` and `/accept-invitation` for the e-mail links. The session cookie is `HttpOnly`,
 so no credential is readable by the page; the panel's `fetch` calls and the live event stream
 carry it on their own. "Sign out" ends the session, and the first `401` (an expired session)
 drops every cached response and shows the sign-in again. The live event stream is read with

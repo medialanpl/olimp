@@ -343,11 +343,13 @@ the sign-in needs a sign-in**: the panel's session or, for MCP and scripts, `Aut
 <token>` (a missing one is `auth.missingToken`, an unknown or revoked token `auth.invalidToken`,
 both 401).
 
-**The panel's sign-in follows Corivo's.** An e-mail and a password (at least 8 characters from
-three of: lowercase, uppercase, digits, other), then always a second factor: a code from an
-authenticator app (TOTP, with ten single-use backup codes), or, for an account without the app, a
-6-digit code sent by e-mail. Without e-mail the app is set up at the first sign-in. Three failed
-passwords lock the e-mail and the address for five minutes. A session lives in an `HttpOnly`,
+**The panel's sign-in.** An e-mail and a password (at least 8 characters from three of: lowercase,
+uppercase, digits, other), then the second factor the account turned on, if any: a code from an
+authenticator app (TOTP, with ten single-use backup codes), or a 6-digit code sent by e-mail. The
+second factor is optional and off for a new account; everyone turns it on or off under Settings →
+Account (with the password). E-mail codes need the mail server: while OLIMP cannot send mail, the
+password alone signs such an account in. Three failed passwords lock the e-mail and the address
+for five minutes. A session lives in an `HttpOnly`,
 `SameSite=Strict` cookie (`Secure` behind the TLS proxy) and ends after 30 minutes without
 activity or after 8 hours. Under Settings → Account everyone changes their name, e-mail, password
 and second factor, sees and ends their sessions and revokes their tokens.
@@ -363,8 +365,8 @@ curl -s -X POST localhost:4850/api/users -H 'content-type: application/json' \
 An admin then invites people by e-mail (name, e-mail, role): OLIMP sends a one-time link, valid
 for 7 days, to set a password; the same link resets a forgotten password ("Forgot your password?"
 on the sign-in, or "Send an invitation or password reset" in the list). An admin also changes
-roles, resets a lost second factor and deletes accounts. E-mail goes through the SMTP server set in
-Settings, Mail (the password encrypted with `OLIMP_HOME/auth.key` and never shown again), or
+roles, turns off a lost second factor and deletes accounts. E-mail goes through the SMTP server set
+in Settings, Mail (the password encrypted with `OLIMP_HOME/auth.key` and never shown again), or
 without it through `OLIMP_SMTP_URL`, from `OLIMP_MAIL_FROM`.
 
 **Tokens** are for the MCP server, `pnpm agent-login` and scripts. An account without an e-mail is

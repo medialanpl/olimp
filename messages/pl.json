@@ -22,7 +22,7 @@
         "invalidCode": "Błędny kod.",
         "codeExpired": "Kod wygasł: zaloguj się ponownie, żeby dostać nowy.",
         "appExists": "Aplikacja uwierzytelniająca jest już skonfigurowana.",
-        "appRequired": "Drugi składnik jest obowiązkowy: bez poczty (OLIMP_SMTP_URL) aplikacja uwierzytelniająca zostaje.",
+        "appRequired": "Kody zapasowe działają z aplikacją uwierzytelniającą: najpierw ją skonfiguruj.",
         "wrongPassword": "Błędne hasło.",
         "invalidLink": "Ten link jest nieprawidłowy, został już użyty albo wygasł."
     },
@@ -234,7 +234,7 @@
         "footer": "Jeśli nie spodziewałeś się tej wiadomości, zignoruj ją.",
         "invite": {
             "subject": "Twoje konto w OLIMP",
-            "body": "Cześć {name}, założono dla Ciebie konto w OLIMP. Ustaw hasło, a potem skonfigurujesz drugi składnik logowania.",
+            "body": "Cześć {name}, założono dla Ciebie konto w OLIMP. Ustaw hasło, żeby się zalogować.",
             "button": "Ustaw hasło"
         },
         "reset": {
@@ -427,9 +427,6 @@
             "back": "Wróć do logowania",
             "resend": "Wyślij kod ponownie",
             "resent": "Nowy kod jest w drodze.",
-            "setupTitle": "Skonfiguruj aplikację uwierzytelniającą",
-            "setupHint": "Drugi składnik jest wymagany, a OLIMP nie wysyła poczty, więc dodaj OLIMP do aplikacji uwierzytelniającej (np. Google Authenticator, 1Password, Authy).",
-            "setupStart": "Pokaż kod QR",
             "forgotTitle": "Reset hasła",
             "forgotHint": "Podaj e-mail: jeśli należy do konta, przyjdzie link do ustawienia nowego hasła.",
             "forgotSent": "Jeśli ten adres należy do konta, link jest w drodze. Działa raz, przez 7 dni.",
@@ -439,7 +436,7 @@
             "forAccount": "Dla {name} ({email}).",
             "setPassword": "Zapisz hasło",
             "passwordSet": "Hasło zapisane",
-            "passwordSetHint": "Zaloguj się e-mailem i nowym hasłem, a potem potwierdź drugim składnikiem.",
+            "passwordSetHint": "Zaloguj się e-mailem i nowym hasłem.",
             "toSignIn": "Przejdź do logowania",
             "linkInvalid": "Ten link nie działa"
         },
@@ -1957,17 +1954,27 @@
             "changePassword": "Zmień hasło",
             "passwordChanged": "Hasło zmienione, pozostałe sesje wylogowane.",
             "twoFactor": "Weryfikacja dwuetapowa",
-            "twoFactorApp": "Logowanie potwierdzasz kodem z aplikacji uwierzytelniającej; kody zapasowe pomogą, gdy zgubisz telefon.",
-            "twoFactorEmail": "Logowanie potwierdzasz kodem wysłanym na e-mail. Aplikacja uwierzytelniająca działa bez poczty.",
-            "viaApp": "Aplikacja",
-            "viaEmail": "Kody e-mailem",
+            "twoFactorHint": {
+                "app": "Logowanie potwierdzasz kodem z aplikacji uwierzytelniającej; kody zapasowe pomogą, gdy zgubisz telefon.",
+                "email": "Logowanie potwierdzasz kodem wysłanym na e-mail. Aplikacja uwierzytelniająca działa bez poczty.",
+                "off": "Logujesz się samym hasłem. Kod z aplikacji uwierzytelniającej albo z e-maila sprawi, że samo skradzione hasło nie wystarczy."
+            },
+            "method": {
+                "app": "Aplikacja",
+                "email": "Kody e-mailem",
+                "off": "Wyłączona"
+            },
             "setUpApp": "Skonfiguruj aplikację",
+            "useEmailCodes": "Używaj kodów e-mailem",
+            "stopEmailCodes": "Wyłącz kody e-mailem",
+            "emailCodesLapse": "OLIMP nie może teraz wysyłać poczty, więc logujesz się samym hasłem, dopóki nie zacznie.",
             "newCodes": "Nowe kody zapasowe",
             "removeApp": "Usuń aplikację",
             "confirm": {
                 "setup": "Dalej",
+                "email": "Włącz",
                 "codes": "Wygeneruj nowe kody",
-                "remove": "Usuń aplikację"
+                "remove": "Wyłącz"
             },
             "scan": "Zeskanuj kod QR aplikacją uwierzytelniającą albo wpisz klucz, a potem podaj kod, który pokaże.",
             "manualKey": "Klucz",
@@ -2004,7 +2011,7 @@
         },
         "accounts": {
             "enable": "Włącz konta",
-            "enableHint": "Konta są do korzystania z OLIMP z innych urządzeń albo przez kilka osób. Pierwsze jest administratorem; od tej chwili panel i API wymagają logowania z drugim składnikiem.",
+            "enableHint": "Konta są do korzystania z OLIMP z innych urządzeń albo przez kilka osób. Pierwsze jest administratorem; od tej chwili panel i API wymagają logowania. Każdy może dodać drugi składnik na swoim koncie.",
             "createAdmin": "Załóż konto administratora",
             "list": "Konta",
             "listHint": "Zapraszaj e-mailem, zmieniaj role, wysyłaj reset hasła albo resetuj zgubiony drugi składnik.",

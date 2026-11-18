@@ -233,7 +233,9 @@ function AccountRow({ user, self, mail }: { user: User; self: boolean; mail: boo
                 </p>
                 <FormError error={write.error} />
             </div>
-            <Badge variant="outline">{t(user.totp ? "account.viaApp" : "account.viaEmail")}</Badge>
+            <Badge variant="outline">
+                {t(`account.method.${user.totp ? "app" : user.emailCodes ? "email" : "off"}`)}
+            </Badge>
             <Select
                 value={user.role}
                 onValueChange={(role) => write.mutate({ path, method: "PATCH", body: { role } })}
@@ -268,7 +270,7 @@ function AccountRow({ user, self, mail }: { user: User; self: boolean; mail: boo
                             {t("accounts.sendLink")}
                         </DropdownMenuItem>
                     )}
-                    {user.totp && (
+                    {(user.totp || user.emailCodes) && (
                         <DropdownMenuItem
                             onSelect={() =>
                                 write.mutate({ path: `${path}/two-factor`, method: "DELETE" })

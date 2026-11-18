@@ -96,6 +96,7 @@ export const toUser = (r: Row): User => ({
     createdAt: r.created_at as string,
     email: r.email ?? null,
     totp: Boolean(r.totp_secret),
+    emailCodes: Number(r.email_codes) === 1,
     lastLoginAt: r.last_login_at ?? null,
 });
 
@@ -130,6 +131,7 @@ const USER_SETS: Record<keyof UserPatch, string> = {
     email: "email",
     role: "role",
     lastLoginAt: "last_login_at",
+    emailCodes: "email_codes",
     passwordHash: "password_hash",
     totpSecret: "totp_secret",
     backupCodes: "backup_codes",
@@ -140,7 +142,11 @@ export function userSets(patch: UserPatch) {
     return {
         sql: entries.map(([key]) => `${USER_SETS[key as keyof UserPatch]} = ?`).join(", "),
         values: entries.map(([key, value]) =>
-            key === "backupCodes" ? JSON.stringify(value) : (value as string | null),
+            key === "backupCodes"
+                ? JSON.stringify(value)
+                : typeof value === "boolean"
+                  ? Number(value)
+                  : (value as string | null),
         ),
     };
 }

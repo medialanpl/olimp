@@ -4,7 +4,6 @@ import { Link } from "react-router";
 import { useTranslations } from "use-intl";
 import { AuthHeading, AuthLayout } from "@/components/auth-layout";
 import { FormError } from "@/components/page";
-import { TotpSetup } from "@/components/totp-setup";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-type Method = "app" | "email" | "setup";
+type Method = "app" | "email";
 
 function useSubmit<T>(work: () => Promise<T>, then: (value: T) => void) {
     const [pending, setPending] = useState(false);
@@ -103,73 +102,30 @@ function SecondFactor({ method, onBack }: { method: "app" | "email"; onBack: () 
     );
 }
 
-// No app and no e-mail: the second factor is mandatory, so the app is set up right here.
-function SetupApp() {
-    const t = useTranslations("web");
-    const { refresh } = useAuth();
-    const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
-    const start = useSubmit(
-        () =>
-            api<{ secret: string; uri: string }>("/api/auth/two-factor/setup", { method: "POST" }),
-        setSetup,
-    );
-    return (
-        <>
-            <AuthHeading title={t("login.setupTitle")} description={t("login.setupHint")} />
-            {setup ? (
-                <TotpSetup
-                    setup={setup}
-                    enable={async (code) =>
-                        (
-                            await api<{ backupCodes: string[] }>("/api/auth/two-factor/enable", {
-                                method: "POST",
-                                body: { secret: setup.secret, code },
-                            })
-                        ).backupCodes
-                    }
-                    onDone={() => void refresh()}
-                />
-            ) : (
-                <>
-                    <FormError error={start.error} />
-                    <Button
-                        size="lg"
-                        className="w-full"
-                        disabled={start.pending}
-                        onClick={() => void start.submit()}
-                    >
-                        <ShieldCheckIcon />
-                        {t("login.setupStart")}
-                    </Button>
-                </>
-            )}
-        </>
-    );
-}
-
 export function LoginPage({ reason }: { reason: "none" | "expired" }) {
     const t = useTranslations("web");
+    const { refresh } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [method, setMethod] = useState<Method | null>(null);
     const login = useSubmit(
         async () =>
             (
-                await api<{ method: Method }>("/api/auth/login", {
+                await api<{ method: Method | null }>("/api/auth/login", {
                     method: "POST",
                     body: { email, password },
                 })
             ).method,
         (next) => {
             setPassword("");
-            setMethod(next);
+            // Without a second factor the password alone signed the account in.
+            if (next) setMethod(next);
+            else void refresh();
         },
     );
     return (
         <AuthLayout>
-            {method === "setup" ? (
-                <SetupApp />
-            ) : method ? (
+            {method ? (
                 <SecondFactor method={method} onBack={() => setMethod(null)} />
             ) : (
                 <>

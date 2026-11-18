@@ -56,8 +56,8 @@ in a web panel, a REST API and an MCP server.
 - 🔌&nbsp;MCP integrations per project, with their secrets stored encrypted, picked per agent step.
 - 🖥️&nbsp;A terminal in every task's folder and a preview of the app it serves, with a design mode
   for pointing the agent at an element.
-- 👥&nbsp;Accounts for a team: a password and a mandatory second factor, API tokens, and each person's
-  own agent logins.
+- 👥&nbsp;Accounts for a team: a password and an optional second factor, API tokens, and each
+  person's own agent logins.
 - 🔔&nbsp;Notifications to Slack, Discord, ntfy or your own endpoint when a job finishes or waits for
   you.
 - 🤖&nbsp;Whatever the panel does, the REST API and the MCP server do too, so your own agent can run

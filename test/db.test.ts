@@ -389,7 +389,7 @@ mysqlTest("a new MySQL database is migrated once, a restart changes nothing", on
         const store = await Store.open({ home: home(), databaseUrl: url });
         assert.deepEqual(
             await store.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
         );
         await store.addRepo("acme/demo", "main");
         await store.addNotes("acme/demo", ["kept"], { task: null, run: null, node: null });
@@ -401,7 +401,7 @@ mysqlTest("a new MySQL database is migrated once, a restart changes nothing", on
         const again = await Store.open({ home: home(), databaseUrl: url });
         assert.deepEqual(
             await again.migrations(),
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
         );
         assert.deepEqual(await schemaOf(url), before);
         assert.deepEqual(
@@ -469,7 +469,10 @@ test("a database from before accounts gets them, its records keep no author", as
         try {
             assert.deepEqual(
                 await store.migrations(),
-                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+                [
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                    23, 24,
+                ],
             );
             assert.equal(await store.hasUsers(), false);
             // Migration 9 names the repository by its name and keeps owner/name as GitHub.
@@ -510,6 +513,39 @@ test("a database from before accounts gets them, its records keep no author", as
         }
     } finally {
         if (url && !sharedDatabase) await dropDatabase(url);
+    }
+});
+
+test("migration 24 keeps e-mail codes for accounts without the app; new accounts start without", async () => {
+    const dir = home();
+    mkdirSync(dir, { recursive: true });
+    const db = new DatabaseSync(join(dir, "olimp.db"));
+    db.exec("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT)");
+    for (const m of MIGRATIONS.filter((m) => m.version <= 23)) {
+        db.exec(m.sql.sqlite);
+        db.prepare("INSERT INTO schema_migrations VALUES (?, 'then')").run(m.version);
+    }
+    db.exec(
+        "INSERT INTO users (id, name, role, created_at, email, totp_secret) VALUES " +
+            "('aaaaaaaaaaaa', 'ada', 'admin', 'then', 'ada@example.com', 'sealed'), " +
+            "('bbbbbbbbbbbb', 'bob', 'member', 'then', 'bob@example.com', NULL)",
+    );
+    db.close();
+    const store = await Store.open({ home: dir, databaseUrl: null });
+    try {
+        assert.deepEqual(
+            (await store.users()).map((u) => [u.name, u.totp, u.emailCodes]),
+            [
+                ["ada", true, false],
+                ["bob", false, true],
+            ],
+        );
+        const created = await store.createUser({ name: "cy", role: "member" }, "c".repeat(64));
+        assert.equal(created?.user.emailCodes, false);
+        await store.updateUser("bbbbbbbbbbbb", { emailCodes: false });
+        assert.equal((await store.user("bbbbbbbbbbbb"))?.emailCodes, false);
+    } finally {
+        await store.close();
     }
 });
 

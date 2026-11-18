@@ -2,10 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     KeyRoundIcon,
     LogOutIcon,
+    MailIcon,
     PlusIcon,
     SaveIcon,
     ShieldIcon,
+    ShieldOffIcon,
     Trash2Icon,
+    TriangleAlertIcon,
     UserRoundIcon,
 } from "lucide-react";
 import { type FormEvent, type ReactNode, useState } from "react";
@@ -14,6 +17,7 @@ import { CopyButton } from "@/components/copy-button";
 import { EmptyState } from "@/components/empty-state";
 import { FormError } from "@/components/page";
 import { BackupCodes, TotpSetup } from "@/components/totp-setup";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -173,9 +177,9 @@ function ChangePassword() {
     );
 }
 
-type Action = "setup" | "codes" | "remove";
+type Action = "setup" | "email" | "codes" | "remove";
 
-// Mandatory: the app, or codes by e-mail when OLIMP can send them.
+// Optional: the app, or codes by e-mail when OLIMP can send them.
 function TwoFactor({ me }: { me: Me }) {
     const t = useTranslations("web");
     const { refresh } = useAuth();
@@ -198,6 +202,10 @@ function TwoFactor({ me }: { me: Me }) {
                         })
                     ).backupCodes,
                 );
+            if (chosen === "email") {
+                await api("/api/me/two-factor/email", { method: "POST", body: { password } });
+                await refresh();
+            }
             if (chosen === "remove") {
                 await api("/api/me/two-factor", { method: "DELETE", body: { password } });
                 await refresh();
@@ -211,16 +219,23 @@ function TwoFactor({ me }: { me: Me }) {
         setCodes(null);
         void refresh();
     };
+    const state = me.totp ? "app" : me.emailCodes ? "email" : "off";
     return (
         <Section
             title={t("account.twoFactor")}
-            description={t(me.totp ? "account.twoFactorApp" : "account.twoFactorEmail")}
+            description={t(`account.twoFactorHint.${state}`)}
             badge={
-                <Badge variant="constructive">
-                    {t(me.totp ? "account.viaApp" : "account.viaEmail")}
+                <Badge variant={state === "off" ? "outline" : "constructive"}>
+                    {t(`account.method.${state}`)}
                 </Badge>
             }
         >
+            {state === "email" && !me.mail && (
+                <Alert variant="warning" className="mb-4">
+                    <TriangleAlertIcon />
+                    <AlertDescription>{t("account.emailCodesLapse")}</AlertDescription>
+                </Alert>
+            )}
             {setup ? (
                 <TotpSetup
                     setup={setup}
@@ -268,22 +283,34 @@ function TwoFactor({ me }: { me: Me }) {
                 </form>
             ) : (
                 <div className="flex flex-wrap gap-2">
-                    {!me.totp && (
+                    {state !== "app" && (
                         <Button onClick={() => setAction("setup")}>
                             <ShieldIcon />
                             {t("account.setUpApp")}
                         </Button>
                     )}
-                    {me.totp && (
-                        <Button variant="outline" onClick={() => setAction("codes")}>
-                            <KeyRoundIcon />
-                            {t("account.newCodes")}
+                    {state === "off" && me.mail && me.email && (
+                        <Button variant="outline" onClick={() => setAction("email")}>
+                            <MailIcon />
+                            {t("account.useEmailCodes")}
                         </Button>
                     )}
-                    {me.totp && me.mail && (
+                    {state === "app" && (
+                        <>
+                            <Button variant="outline" onClick={() => setAction("codes")}>
+                                <KeyRoundIcon />
+                                {t("account.newCodes")}
+                            </Button>
+                            <Button variant="outline" onClick={() => setAction("remove")}>
+                                <Trash2Icon />
+                                {t("account.removeApp")}
+                            </Button>
+                        </>
+                    )}
+                    {state === "email" && (
                         <Button variant="outline" onClick={() => setAction("remove")}>
-                            <Trash2Icon />
-                            {t("account.removeApp")}
+                            <ShieldOffIcon />
+                            {t("account.stopEmailCodes")}
                         </Button>
                     )}
                 </div>

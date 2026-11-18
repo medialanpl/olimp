@@ -42,6 +42,7 @@ async function setup(mail = false) {
     let jar: string | null = null;
     const call = (method: string, path: string, body?: object, headers: object = {}) =>
         new Promise<Answer>((resolve, reject) => {
+            const payload = body ? JSON.stringify(body) : undefined;
             const req = request(
                 {
                     host: "127.0.0.1",
@@ -52,6 +53,8 @@ async function setup(mail = false) {
                         host: `127.0.0.1:${port}`,
                         "content-type": "application/json",
                         ...(jar && { cookie: jar.split(";")[0] }),
+                        // Node's client sends a DELETE body without a length unless given one.
+                        ...(payload && { "content-length": Buffer.byteLength(payload) }),
                         ...headers,
                     },
                 },
@@ -72,7 +75,7 @@ async function setup(mail = false) {
                 },
             );
             req.on("error", reject);
-            req.end(body ? JSON.stringify(body) : undefined);
+            req.end(payload);
         });
     return { home, store, cfg, call, forget: () => (jar = null) };
 }
@@ -88,7 +91,7 @@ test("TOTP matches RFC 6238 and passwords follow Corivo's policy", () => {
     assert.equal(passwordCompliant("lower-and-digits-1"), true);
 });
 
-test("the first admin signs in with a password and must set up the app without e-mail", async () => {
+test("the first admin signs in with a password alone and may turn the app on and off", async () => {
     const { call, home, forget } = await setup();
     const weak = await call("POST", "/api/users", {
         name: "ada",
@@ -111,16 +114,21 @@ test("the first admin signs in with a password and must set up the app without e
         password: PASSWORD,
     });
     assert.equal(login.status, 200);
-    assert.deepEqual(login.json, { method: "setup" });
+    assert.deepEqual(login.json, { method: null });
     assert.match(login.cookie ?? "", /HttpOnly; SameSite=Strict; Max-Age=28800$/);
-    // Half signed in: the panel stays closed until the second factor.
-    assert.equal((await call("GET", "/api/me")).status, 401);
-    const setup1 = await call("POST", "/api/auth/two-factor/setup");
+    const before = await call("GET", "/api/me");
+    assert.deepEqual([before.json.totp, before.json.emailCodes], [false, false]);
+    // Without e-mail an account cannot choose codes by e-mail; the app works without it.
+    assert.equal(
+        (await call("POST", "/api/me/two-factor/email", { password: PASSWORD })).json.code,
+        "mail.notConfigured",
+    );
+    const setup1 = await call("POST", "/api/me/two-factor/setup", { password: PASSWORD });
     const secret = setup1.json.secret as string;
     assert.match(setup1.json.uri as string, /^otpauth:\/\/totp\/OLIMP:ada%40example\.com\?secret=/);
-    const wrong = await call("POST", "/api/auth/two-factor/enable", { secret, code: "000000" });
+    const wrong = await call("POST", "/api/me/two-factor/enable", { secret, code: "000000" });
     assert.equal(wrong.json.code, "auth.invalidCode");
-    const enabled = await call("POST", "/api/auth/two-factor/enable", {
+    const enabled = await call("POST", "/api/me/two-factor/enable", {
         secret,
         code: totp(secret, now()),
     });
@@ -142,6 +150,8 @@ test("the first admin signs in with a password and must set up the app without e
             .json,
         { method: "app" },
     );
+    // Half signed in: the panel stays closed until the second factor.
+    assert.equal((await call("GET", "/api/me")).status, 401);
     assert.equal((await call("POST", "/api/auth/two-factor", { code: "123456" })).status, 401);
     assert.equal(
         (await call("POST", "/api/auth/two-factor", { code: backupCodes[0] })).status,
@@ -154,16 +164,31 @@ test("the first admin signs in with a password and must set up the app without e
         (await call("POST", "/api/auth/two-factor", { code: backupCodes[0] })).status,
         401,
     );
+    assert.equal(
+        (await call("POST", "/api/auth/two-factor", { code: backupCodes[1] })).status,
+        200,
+    );
+
+    // Turned off with the password, the next sign-in needs the password alone again.
+    assert.equal(
+        (await call("DELETE", "/api/me/two-factor", { password: "Wrong-pass-1" })).json.code,
+        "auth.wrongPassword",
+    );
+    const off = await call("DELETE", "/api/me/two-factor", { password: PASSWORD });
+    assert.deepEqual([off.json.totp, off.json.emailCodes], [false, false]);
+    await call("POST", "/api/auth/logout");
+    assert.deepEqual(
+        (await call("POST", "/api/auth/login", { email: "ada@example.com", password: PASSWORD }))
+            .json,
+        { method: null },
+    );
+    assert.equal((await call("GET", "/api/me")).status, 200);
 });
 
-test("an idle or unfinished session signs nobody in, and a foreign page cannot use the cookie", async () => {
+test("an idle session signs nobody in, and a foreign page cannot use the cookie", async () => {
     const { call, store } = await setup();
     await call("POST", "/api/users", { name: "cy", email: "cy@example.com", password: PASSWORD });
     await call("POST", "/api/auth/login", { email: "cy@example.com", password: PASSWORD });
-    const { secret } = (await call("POST", "/api/auth/two-factor/setup")).json as {
-        secret: string;
-    };
-    await call("POST", "/api/auth/two-factor/enable", { secret, code: totp(secret, now()) });
     assert.equal((await call("GET", "/api/me")).status, 200);
     const foreign = await call("GET", "/api/me", undefined, { origin: "https://evil.example" });
     assert.equal(foreign.status, 403);
@@ -175,12 +200,11 @@ test("an idle or unfinished session signs nobody in, and a foreign page cannot u
     assert.equal((await call("GET", "/api/me")).status, 401);
 });
 
-test("an invited member sets a password from the e-mail and signs in with a code by e-mail", async () => {
+test("an invited member sets a password from the e-mail and turns on codes by e-mail", async () => {
     const { call, forget } = await setup(true);
     await call("POST", "/api/users", { name: "ann", email: "ann@example.com", password: PASSWORD });
     await call("POST", "/api/auth/login", { email: "ann@example.com", password: PASSWORD });
     const code = () => (/\b(\d{6})\b/.exec(smtp.messages.at(-1) ?? "") ?? [])[1] as string;
-    assert.equal((await call("POST", "/api/auth/two-factor", { code: code() })).status, 200);
 
     const invited = await call("POST", "/api/users", { name: "ben", email: "ben@example.com" });
     assert.equal(invited.status, 201);
@@ -202,12 +226,21 @@ test("an invited member sets a password from the e-mail and signs in with a code
         (await call("POST", "/api/auth/password", { token, password: PASSWORD })).json.code,
         "auth.invalidLink",
     );
+    const first = await call("POST", "/api/auth/login", {
+        email: "ben@example.com",
+        password: PASSWORD,
+    });
+    assert.deepEqual(first.json, { method: null });
+    const on = await call("POST", "/api/me/two-factor/email", { password: PASSWORD });
+    assert.equal(on.json.emailCodes, true);
+    await call("POST", "/api/auth/logout");
     const login = await call("POST", "/api/auth/login", {
         email: "ben@example.com",
         password: PASSWORD,
     });
     assert.deepEqual(login.json, { method: "email" });
     assert.match(smtp.messages.at(-1) ?? "", /To: ben@example\.com/);
+    assert.equal((await call("GET", "/api/me")).status, 401);
     assert.equal((await call("POST", "/api/auth/two-factor", { code: code() })).status, 200);
     const me = (await call("GET", "/api/me")).json;
     assert.equal(me.role, "member");
@@ -265,6 +298,9 @@ test("an admin changes roles, keeps the last admin and resets a lost second fact
     await store.updateUser(admin.json.id as string, { totpSecret: "x", backupCodes: ["y"] });
     const reset = await call("DELETE", `/api/users/${admin.json.id}/two-factor`, undefined, auth);
     assert.equal(reset.json.totp, false);
+    await store.updateUser(bot.json.id as string, { emailCodes: true });
+    const lostMail = await call("DELETE", `/api/users/${bot.json.id}/two-factor`, undefined, auth);
+    assert.equal(lostMail.json.emailCodes, false);
 });
 
 // Last: the lockout is per process and also locks 127.0.0.1, which every test here comes from.

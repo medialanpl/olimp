@@ -69,9 +69,9 @@ export function registerUserTools(server: McpServer, call: Call): void {
         "olimp_reset_two_factor",
         {
             description:
-                "Remove an account's authenticator app and backup codes and sign it out " +
-                "everywhere, e.g. after a lost phone (admin only). It then gets its sign-in codes " +
-                "by e-mail, or sets the app up again at its next sign-in.",
+                "Turn off an account's second factor (the authenticator app with its backup " +
+                "codes, or codes by e-mail) and sign it out everywhere, e.g. after a lost phone " +
+                "(admin only). It then signs in with its password alone until it turns one on again.",
             inputSchema: { id },
         },
         ({ id: user }) => call("DELETE", `/api/users/${user}/two-factor`),

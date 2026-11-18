@@ -40,8 +40,8 @@ use and configure it, with the REST API: [docs/guide.md](docs/guide.md); how it 
 - The API trusts anything that reaches it until accounts exist: keep it bound to loopback and keep
   the host, origin and content-type checks in `src/api.ts` (tests in `test/api.test.ts`). With
   accounts every request but `/health` and the sign-in needs a token or the panel's session (a
-  password and a mandatory second factor, as in Corivo), and `OLIMP_PUBLIC_HOST` is accepted only
-  then (tests in `test/users.test.ts` and `test/auth.test.ts`).
+  password, then the second factor the account turned on, if any: nothing is forced, the
+  maintainer's decision), and `OLIMP_PUBLIC_HOST` is accepted only then (tests in `test/users.test.ts` and `test/auth.test.ts`).
 - Secrets never go into the database, logs or the repository: OLIMP uses the installation's own
   `gh` login and each account's own `claude` and `codex` logins in its directory in `OLIMP_HOME`
   (a token from `claude setup-token` pasted in the panel is a file only OLIMP can read there);

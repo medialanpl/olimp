@@ -211,6 +211,7 @@ async function enableTotp(store: Store, cfg: Config, user: User, body: Record<st
     await store.updateUser(user.id, {
         totpSecret: seal(cfg.home, secret),
         backupCodes: codes.map(hashBackupCode),
+        emailCodes: false,
     });
     audit("auth.two_factor_enabled", { user: user.id });
     return codes;
@@ -243,8 +244,8 @@ async function verified(store: Store, user: User, session: Session) {
     return user;
 }
 
-// Sign-in as in Corivo: e-mail and password, then always a second factor. Outside MCP, which
-// signs in with a token.
+// Sign-in: e-mail and password, then the second factor the account turned on, if any. Outside
+// MCP, which signs in with a token.
 export async function authRoute(
     store: Store,
     cfg: Config,
@@ -292,9 +293,10 @@ export async function authRoute(
             userAgent: (req.headers["user-agent"] ?? "").slice(0, 255),
         };
         await store.createSession(session);
-        // Without an app the code comes by e-mail; without e-mail the app must be set up now.
-        const method = user.totp ? "app" : mailReady(cfg) ? "email" : "setup";
+        // E-mail codes lapse while OLIMP cannot send mail, so nobody is locked out by its setup.
+        const method = user.totp ? "app" : user.emailCodes && mailReady(cfg) ? "email" : null;
         if (method === "email") await sendCode(store, cfg, locale, user, session);
+        if (!method) await verified(store, user, session);
         return { status: 200, payload: { method }, cookie: cookie(cfg, req, value) };
     }
     if (path === "/api/auth/two-factor") {
@@ -309,23 +311,9 @@ export async function authRoute(
     }
     if (path === "/api/auth/two-factor/email") {
         const { session, user } = await pending(store, req);
-        if (user.totp || !mailReady(cfg)) throw new HttpError(409, "mail.notConfigured");
+        if (!user.emailCodes || !mailReady(cfg)) throw new HttpError(409, "mail.notConfigured");
         await sendCode(store, cfg, locale, user, session);
         return { status: 200, payload: { method: "email" } };
-    }
-    if (path === "/api/auth/two-factor/setup") {
-        const { user } = await pending(store, req);
-        if (user.totp) throw new HttpError(409, "auth.appExists");
-        return { status: 200, payload: newTotp(user) };
-    }
-    if (path === "/api/auth/two-factor/enable") {
-        const { session, user } = await pending(store, req);
-        if (user.totp) throw new HttpError(409, "auth.appExists");
-        const backupCodes = await enableTotp(store, cfg, user, body);
-        return {
-            status: 200,
-            payload: { user: await verified(store, user, session), backupCodes },
-        };
     }
     if (path === "/api/auth/logout") {
         const value = cookieOf(req);
@@ -364,7 +352,7 @@ export async function authRoute(
     return undefined;
 }
 
-// The caller's own account in the panel: name and e-mail, password, the app, sessions.
+// The caller's own account in the panel: name and e-mail, password, second factor, sessions.
 export async function meRoute(
     store: Store,
     cfg: Config,
@@ -414,11 +402,18 @@ export async function meRoute(
     }
     if (path === "/api/me/two-factor/enable" && method === "POST")
         return [200, { backupCodes: await enableTotp(store, cfg, actor, await readJson(req)) }];
+    if (path === "/api/me/two-factor/email" && method === "POST") {
+        await checkPassword((await readJson(req)).password);
+        if (actor.totp) throw new HttpError(409, "auth.appExists");
+        if (!mailReady(cfg)) throw new HttpError(409, "mail.notConfigured");
+        if (!actor.email) throw new HttpError(409, "account.noEmail", { account: actor.name });
+        await store.updateUser(actor.id, { emailCodes: true });
+        audit("auth.two_factor_enabled", { user: actor.id, method: "email" });
+        return [200, await store.user(actor.id)];
+    }
     if (path === "/api/me/two-factor" && method === "DELETE") {
         await checkPassword((await readJson(req)).password);
-        // The second factor is mandatory: without the app the codes must come by e-mail.
-        if (!mailReady(cfg) || !actor.email) throw new HttpError(409, "auth.appRequired");
-        await store.updateUser(actor.id, { totpSecret: null, backupCodes: [] });
+        await store.updateUser(actor.id, { totpSecret: null, backupCodes: [], emailCodes: false });
         audit("auth.two_factor_disabled", { user: actor.id });
         return [200, await store.user(actor.id)];
     }

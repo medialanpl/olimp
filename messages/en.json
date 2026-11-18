@@ -22,7 +22,7 @@
         "invalidCode": "Wrong code.",
         "codeExpired": "The code expired: sign in again for a new one.",
         "appExists": "The authenticator app is already set up.",
-        "appRequired": "A second factor is mandatory: without e-mail (OLIMP_SMTP_URL) the authenticator app stays.",
+        "appRequired": "Backup codes come with the authenticator app: set it up first.",
         "wrongPassword": "Wrong password.",
         "invalidLink": "This link is invalid, was already used or expired."
     },
@@ -234,7 +234,7 @@
         "footer": "If you did not expect this message, ignore it.",
         "invite": {
             "subject": "Your OLIMP account",
-            "body": "Hello {name}, an account in OLIMP was created for you. Set your password; then you will set up the second factor.",
+            "body": "Hello {name}, an account in OLIMP was created for you. Set your password to sign in.",
             "button": "Set password"
         },
         "reset": {
@@ -427,9 +427,6 @@
             "back": "Back to sign-in",
             "resend": "Send the code again",
             "resent": "A new code is on its way.",
-            "setupTitle": "Set up the authenticator app",
-            "setupHint": "A second factor is required and OLIMP cannot send e-mail, so add OLIMP to an authenticator app (e.g. Google Authenticator, 1Password, Authy).",
-            "setupStart": "Show the QR code",
             "forgotTitle": "Reset your password",
             "forgotHint": "Enter your e-mail: if an account uses it, a link to set a new password will arrive.",
             "forgotSent": "If an account uses this address, a link is on its way. It works once, for 7 days.",
@@ -439,7 +436,7 @@
             "forAccount": "For {name} ({email}).",
             "setPassword": "Save the password",
             "passwordSet": "Password saved",
-            "passwordSetHint": "Sign in with your e-mail and the new password; then confirm with a second factor.",
+            "passwordSetHint": "Sign in with your e-mail and the new password.",
             "toSignIn": "Go to sign-in",
             "linkInvalid": "This link does not work"
         },
@@ -1957,17 +1954,27 @@
             "changePassword": "Change password",
             "passwordChanged": "Password changed; other sessions signed out.",
             "twoFactor": "Two-step verification",
-            "twoFactorApp": "Sign-ins are confirmed with a code from your authenticator app; backup codes help when you lose the phone.",
-            "twoFactorEmail": "Sign-ins are confirmed with a code sent to your e-mail. An authenticator app works without e-mail.",
-            "viaApp": "App",
-            "viaEmail": "E-mail codes",
+            "twoFactorHint": {
+                "app": "Sign-ins are confirmed with a code from your authenticator app; backup codes help when you lose the phone.",
+                "email": "Sign-ins are confirmed with a code sent to your e-mail. An authenticator app works without e-mail.",
+                "off": "You sign in with your password alone. A code from an authenticator app or from your e-mail keeps a stolen password from being enough."
+            },
+            "method": {
+                "app": "App",
+                "email": "E-mail codes",
+                "off": "Off"
+            },
             "setUpApp": "Set up an app",
+            "useEmailCodes": "Use e-mail codes",
+            "stopEmailCodes": "Turn off e-mail codes",
+            "emailCodesLapse": "OLIMP cannot send e-mail now, so you sign in with your password alone until it can.",
             "newCodes": "New backup codes",
             "removeApp": "Remove the app",
             "confirm": {
                 "setup": "Continue",
+                "email": "Turn on",
                 "codes": "Generate new codes",
-                "remove": "Remove the app"
+                "remove": "Turn off"
             },
             "scan": "Scan the QR code with your authenticator app, or type the key in, then enter the code it shows.",
             "manualKey": "Key",
@@ -2004,7 +2011,7 @@
         },
         "accounts": {
             "enable": "Turn on accounts",
-            "enableHint": "Accounts are for using OLIMP from other devices or by several people. The first one is an admin; from then on the panel and the API need a sign-in with a second factor.",
+            "enableHint": "Accounts are for using OLIMP from other devices or by several people. The first one is an admin; from then on the panel and the API need a sign-in. Everyone can add a second factor in their account.",
             "createAdmin": "Create the admin account",
             "list": "Accounts",
             "listHint": "Invite people by e-mail, change roles, send a password reset or reset a lost second factor.",

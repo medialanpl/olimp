@@ -82,8 +82,9 @@ export interface User {
     createdAt: string;
     // The sign-in of the panel; null for an account that only has API tokens.
     email: string | null;
-    // Whether the account set up an authenticator app; without one its codes come by e-mail.
+    // The optional second factor: an authenticator app, or else codes by e-mail; never both.
     totp: boolean;
+    emailCodes: boolean;
     lastLoginAt: string | null;
 }
 
@@ -101,7 +102,7 @@ export interface Credentials {
 }
 
 export type UserPatch = Partial<
-    Pick<User, "name" | "email" | "role" | "lastLoginAt"> & {
+    Pick<User, "name" | "email" | "role" | "lastLoginAt" | "emailCodes"> & {
         passwordHash: string;
         totpSecret: string | null;
         backupCodes: string[];

@@ -813,4 +813,17 @@ export const MIGRATIONS: { version: number; sql: { sqlite: string; mysql: string
             ],
         },
     },
+    // The second factor became optional: accounts without the app keep the e-mail codes they had.
+    {
+        version: 24,
+        sql: {
+            sqlite:
+                "ALTER TABLE users ADD COLUMN email_codes INTEGER NOT NULL DEFAULT 0;\n" +
+                "UPDATE users SET email_codes = 1 WHERE totp_secret IS NULL;",
+            mysql: [
+                "ALTER TABLE users ADD COLUMN email_codes TINYINT NOT NULL DEFAULT 0",
+                "UPDATE users SET email_codes = 1 WHERE totp_secret IS NULL",
+            ],
+        },
+    },
 ];

@@ -117,10 +117,14 @@ export async function usersRoute(
             requireAdmin(actor);
             return [200, { sent: await sendLink(store, cfg, locale, account) }];
         }
-        // For a lost phone: back to codes by e-mail, or to setting the app up at the next sign-in.
+        // For a lost phone or mailbox: back to the password alone.
         if (user[2] === "/two-factor" && method === "DELETE") {
             requireAdmin(actor);
-            await store.updateUser(account.id, { totpSecret: null, backupCodes: [] });
+            await store.updateUser(account.id, {
+                totpSecret: null,
+                backupCodes: [],
+                emailCodes: false,
+            });
             await store.deleteSessions(account.id);
             return [200, await store.user(account.id)];
         }
